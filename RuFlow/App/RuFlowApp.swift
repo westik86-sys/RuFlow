@@ -28,6 +28,18 @@ private struct MenuBarContentView: View {
 
         Divider()
 
+        if dictationController.isRecordingOrSaving {
+            Button("Остановить запись") {
+                dictationController.stopRecordingFromMenu()
+            }
+
+            Button("Отменить запись") {
+                dictationController.cancelRecordingFromMenu()
+            }
+
+            Divider()
+        }
+
         Button("Настройки...") {
             NSApp.activate(ignoringOtherApps: true)
             openSettings()

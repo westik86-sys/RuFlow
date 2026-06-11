@@ -100,6 +100,18 @@ final class DictationController: ObservableObject {
         recordingService.recordingsDirectory?.path ?? "Application Support/RuFlow/Recordings"
     }
 
+    var runningAppPath: String {
+        Bundle.main.bundleURL.path
+    }
+
+    var accessibilityStatusText: String {
+        isAccessibilityTrusted ? "Разрешено" : "Требуется для этой копии приложения"
+    }
+
+    var isRecordingOrSaving: Bool {
+        state == .recording || state == .saving
+    }
+
     func refreshPermissionsAndHotkey() {
         isAccessibilityTrusted = AccessibilityPermission.isTrusted
         microphoneAuthorizationStatus = MicrophonePermission.authorizationStatus
@@ -112,6 +124,19 @@ final class DictationController: ObservableObject {
             _ = await MicrophonePermission.requestIfNeeded()
             self?.refreshPermissionsAndHotkey()
         }
+    }
+
+    func stopRecordingFromMenu() {
+        stopRecordingFromUserAction()
+    }
+
+    func stopRecordingFromUserAction() {
+        finishRecording()
+        hotkeyManager.markSessionInactive()
+    }
+
+    func cancelRecordingFromMenu() {
+        cancelRecording()
     }
 
     private func beginRecording() {
@@ -209,7 +234,15 @@ final class DictationController: ObservableObject {
         let minutes = elapsedSeconds / 60
         let seconds = elapsedSeconds % 60
         recordingDurationText = String(format: "%02d:%02d", minutes, seconds)
-        overlayController.show(message: "Слушаю... \(recordingDurationText)")
+        overlayController.showRecording(
+            message: "Слушаю... \(recordingDurationText)",
+            onStop: { [weak self] in
+                self?.stopRecordingFromUserAction()
+            },
+            onCancel: { [weak self] in
+                self?.cancelRecording()
+            }
+        )
     }
 
     private func presentError(_ message: String) {

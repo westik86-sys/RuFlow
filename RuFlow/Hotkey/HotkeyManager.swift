@@ -1,3 +1,4 @@
+import AppKit
 import ApplicationServices
 import Foundation
 
@@ -9,7 +10,10 @@ final class HotkeyManager {
     private let spaceKeyCode: Int64 = 49
     private let escapeKeyCode: Int64 = 53
     private var eventTap: CFMachPort?
+    private var globalKeyUpMonitor: Any?
+    private var globalFlagsMonitor: Any?
     private var runLoopSource: CFRunLoopSource?
+    private var releaseWatchdogTimer: Timer?
     private var isHotkeyDown = false
     private var isSessionActive = false
 
@@ -48,6 +52,7 @@ final class HotkeyManager {
 
         eventTap = tap
         runLoopSource = source
+        startGlobalReleaseMonitors()
         return true
     }
 
@@ -62,11 +67,14 @@ final class HotkeyManager {
 
         eventTap = nil
         runLoopSource = nil
+        stopGlobalReleaseMonitors()
+        stopReleaseWatchdog()
         isHotkeyDown = false
         isSessionActive = false
     }
 
     func markSessionInactive() {
+        stopReleaseWatchdog()
         isSessionActive = false
         isHotkeyDown = false
     }
@@ -103,10 +111,8 @@ final class HotkeyManager {
     }
 
     private func handleKeyDown(event: CGEvent, keyCode: Int64) -> Unmanaged<CGEvent>? {
-        if keyCode == escapeKeyCode, isSessionActive {
-            isHotkeyDown = false
-            isSessionActive = false
-            onCancel?()
+        if keyCode == escapeKeyCode {
+            cancelHotkeySession()
             return nil
         }
 
@@ -118,6 +124,7 @@ final class HotkeyManager {
         if !isHotkeyDown && !isRepeat {
             isHotkeyDown = true
             isSessionActive = true
+            startReleaseWatchdog()
             onPress?()
         }
 
@@ -129,8 +136,7 @@ final class HotkeyManager {
             return Unmanaged.passUnretained(event)
         }
 
-        isHotkeyDown = false
-        onRelease?()
+        releaseHotkeySession()
         return nil
     }
 
@@ -139,8 +145,120 @@ final class HotkeyManager {
             return Unmanaged.passUnretained(event)
         }
 
-        isHotkeyDown = false
-        onRelease?()
+        releaseHotkeySession()
         return Unmanaged.passUnretained(event)
     }
+
+    private func startGlobalReleaseMonitors() {
+        stopGlobalReleaseMonitors()
+
+        globalKeyUpMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyUp) { [weak self] event in
+            guard let self else {
+                return
+            }
+
+            let keyCode = event.keyCode
+            DispatchQueue.main.async {
+                self.handleGlobalKeyUp(keyCode: keyCode)
+            }
+        }
+
+        globalFlagsMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            guard let self else {
+                return
+            }
+
+            let isOptionDown = event.modifierFlags.contains(.option)
+            DispatchQueue.main.async {
+                self.handleGlobalFlagsChanged(isOptionDown: isOptionDown)
+            }
+        }
+    }
+
+    private func stopGlobalReleaseMonitors() {
+        if let globalKeyUpMonitor {
+            NSEvent.removeMonitor(globalKeyUpMonitor)
+        }
+
+        if let globalFlagsMonitor {
+            NSEvent.removeMonitor(globalFlagsMonitor)
+        }
+
+        globalKeyUpMonitor = nil
+        globalFlagsMonitor = nil
+    }
+
+    private func handleGlobalKeyUp(keyCode: UInt16) {
+        if keyCode == UInt16(escapeKeyCode) {
+            cancelHotkeySession()
+            return
+        }
+
+        guard keyCode == UInt16(spaceKeyCode) else {
+            return
+        }
+
+        releaseHotkeySession()
+    }
+
+    private func handleGlobalFlagsChanged(isOptionDown: Bool) {
+        guard !isOptionDown else {
+            return
+        }
+
+        releaseHotkeySession()
+    }
+
+    private func startReleaseWatchdog() {
+        stopReleaseWatchdog()
+
+        let timer = Timer(timeInterval: 0.03, repeats: true) { [weak self] _ in
+            self?.stopIfHotkeyWasPhysicallyReleased()
+        }
+
+        RunLoop.main.add(timer, forMode: .common)
+        releaseWatchdogTimer = timer
+    }
+
+    private func stopReleaseWatchdog() {
+        releaseWatchdogTimer?.invalidate()
+        releaseWatchdogTimer = nil
+    }
+
+    private func stopIfHotkeyWasPhysicallyReleased() {
+        guard isHotkeyDown else {
+            stopReleaseWatchdog()
+            return
+        }
+
+        let isSpaceDown = CGEventSource.keyState(
+            .hidSystemState,
+            key: CGKeyCode(spaceKeyCode)
+        )
+        let isOptionDown = CGEventSource.flagsState(.hidSystemState).contains(.maskAlternate)
+
+        if !isSpaceDown || !isOptionDown {
+            releaseHotkeySession()
+        }
+    }
+
+    private func releaseHotkeySession() {
+        guard isHotkeyDown else {
+            return
+        }
+
+        stopReleaseWatchdog()
+        isHotkeyDown = false
+        isSessionActive = false
+        onRelease?()
+    }
+
+    private func cancelHotkeySession() {
+        stopReleaseWatchdog()
+        isHotkeyDown = false
+        isSessionActive = false
+        onCancel?()
+    }
 }
+
+extension HotkeyManager: @unchecked Sendable {}

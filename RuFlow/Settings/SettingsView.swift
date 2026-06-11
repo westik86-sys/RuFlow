@@ -30,7 +30,7 @@ struct SettingsView: View {
                 GridRow {
                     Text("Accessibility")
                         .foregroundStyle(.secondary)
-                    Text(dictationController.isAccessibilityTrusted ? "Разрешено" : "Требуется")
+                    Text(dictationController.accessibilityStatusText)
                 }
 
                 GridRow {
@@ -44,6 +44,14 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                     Text(dictationController.recordingsDirectoryPath)
                         .lineLimit(2)
+                        .textSelection(.enabled)
+                }
+
+                GridRow {
+                    Text("Запущено из")
+                        .foregroundStyle(.secondary)
+                    Text(dictationController.runningAppPath)
+                        .lineLimit(3)
                         .textSelection(.enabled)
                 }
             }
@@ -62,9 +70,16 @@ struct SettingsView: View {
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            if !dictationController.isAccessibilityTrusted {
+                Text("Если RuFlow включен в Accessibility, но здесь всё равно написано \"Требуется\", удалите RuFlow из списка Accessibility через кнопку минус, затем добавьте именно приложение из строки \"Запущено из\" и полностью перезапустите RuFlow.")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(24)
-        .frame(width: 460)
+        .frame(width: 560)
     }
 
     private var permissionButtons: some View {
