@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		8A7F1C092C6A030100000001 /* ASRDebugConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1C032C6A030100000001 /* ASRDebugConfiguration.swift */; };
+		8A7F1C0A2C6A030100000001 /* ASRSidecarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1C042C6A030100000001 /* ASRSidecarService.swift */; };
 		8A7F1A782C6A010100000001 /* RuFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1A692C6A010100000001 /* RuFlowApp.swift */; };
 		8A7F1A792C6A010100000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1A6A2C6A010100000001 /* AppDelegate.swift */; };
 		8A7F1A7A2C6A010100000001 /* DictationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1A6B2C6A010100000001 /* DictationController.swift */; };
@@ -22,6 +24,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		8A7F1C012C6A030100000001 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		8A7F1C0B2C6A030100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		8A7F1C022C6A030100000001 /* runner.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = runner.py; sourceTree = "<group>"; };
+		8A7F1C032C6A030100000001 /* ASRDebugConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASRDebugConfiguration.swift; sourceTree = "<group>"; };
+		8A7F1C042C6A030100000001 /* ASRSidecarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASRSidecarService.swift; sourceTree = "<group>"; };
 		8A7F1A5E2C6A010100000001 /* RuFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RuFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A7F1A692C6A010100000001 /* RuFlowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuFlowApp.swift; sourceTree = "<group>"; };
 		8A7F1A6A2C6A010100000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -51,6 +58,8 @@
 		8A7F1A552C6A010100000001 = {
 			isa = PBXGroup;
 			children = (
+				8A7F1C062C6A030100000001 /* Config */,
+				8A7F1C072C6A030100000001 /* asr */,
 				8A7F1A662C6A010100000001 /* RuFlow */,
 				8A7F1A5F2C6A010100000001 /* Products */,
 			);
@@ -67,6 +76,7 @@
 		8A7F1A662C6A010100000001 /* RuFlow */ = {
 			isa = PBXGroup;
 			children = (
+				8A7F1C082C6A030100000001 /* ASR */,
 				8A7F1A672C6A010100000001 /* App */,
 				8A7F1B122C6A020100000001 /* Audio */,
 				8A7F1A732C6A010100000001 /* Hotkey */,
@@ -75,6 +85,32 @@
 				8A7F1A762C6A010100000001 /* Settings */,
 			);
 			path = RuFlow;
+			sourceTree = "<group>";
+		};
+		8A7F1C062C6A030100000001 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				8A7F1C012C6A030100000001 /* Debug.xcconfig */,
+				8A7F1C0B2C6A030100000001 /* Info.plist */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		8A7F1C072C6A030100000001 /* asr */ = {
+			isa = PBXGroup;
+			children = (
+				8A7F1C022C6A030100000001 /* runner.py */,
+			);
+			path = asr;
+			sourceTree = "<group>";
+		};
+		8A7F1C082C6A030100000001 /* ASR */ = {
+			isa = PBXGroup;
+			children = (
+				8A7F1C032C6A030100000001 /* ASRDebugConfiguration.swift */,
+				8A7F1C042C6A030100000001 /* ASRSidecarService.swift */,
+			);
+			path = ASR;
 			sourceTree = "<group>";
 		};
 		8A7F1A672C6A010100000001 /* App */ = {
@@ -199,6 +235,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8A7F1C092C6A030100000001 /* ASRDebugConfiguration.swift in Sources */,
+				8A7F1C0A2C6A030100000001 /* ASRSidecarService.swift in Sources */,
 				8A7F1A782C6A010100000001 /* RuFlowApp.swift in Sources */,
 				8A7F1A792C6A010100000001 /* AppDelegate.swift in Sources */,
 				8A7F1A7A2C6A010100000001 /* DictationController.swift in Sources */,
@@ -335,17 +373,19 @@
 		};
 		8A7F1A612C6A010100000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8A7F1C012C6A030100000001 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = RuFlow;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RuFlow needs microphone access to record push-to-talk dictation.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_FILE = Config/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -367,11 +407,12 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
-				GENERATE_INFOPLIST_FILE = YES;
+				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_KEY_CFBundleDisplayName = RuFlow;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RuFlow needs microphone access to record push-to-talk dictation.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_FILE = Config/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

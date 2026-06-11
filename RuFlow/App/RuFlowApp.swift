@@ -28,12 +28,18 @@ private struct MenuBarContentView: View {
 
         Divider()
 
-        if dictationController.isRecordingOrSaving {
+        if dictationController.state == .recording {
             Button("Остановить запись") {
                 dictationController.stopRecordingFromMenu()
             }
 
             Button("Отменить запись") {
+                dictationController.cancelRecordingFromMenu()
+            }
+
+            Divider()
+        } else if dictationController.state == .saving {
+            Button("Отменить распознавание") {
                 dictationController.cancelRecordingFromMenu()
             }
 

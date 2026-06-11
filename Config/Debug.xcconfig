@@ -1,0 +1,2 @@
+ASR_PYTHON_PATH = $(SRCROOT)/asr/.venv/bin/python
+ASR_RUNNER_PATH = $(SRCROOT)/asr/runner.py

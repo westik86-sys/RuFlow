@@ -48,6 +48,22 @@ struct SettingsView: View {
                 }
 
                 GridRow {
+                    Text("Python")
+                        .foregroundStyle(.secondary)
+                    Text(dictationController.asrPythonPath)
+                        .lineLimit(2)
+                        .textSelection(.enabled)
+                }
+
+                GridRow {
+                    Text("ASR runner")
+                        .foregroundStyle(.secondary)
+                    Text(dictationController.asrRunnerPath)
+                        .lineLimit(3)
+                        .textSelection(.enabled)
+                }
+
+                GridRow {
                     Text("Запущено из")
                         .foregroundStyle(.secondary)
                     Text(dictationController.runningAppPath)
@@ -66,7 +82,7 @@ struct SettingsView: View {
                 }
             }
 
-            Text("Для глобального hotkey и synthetic Cmd+V macOS должна разрешить приложению управление компьютером в System Settings -> Privacy & Security -> Accessibility. Для записи WAV нужен доступ к микрофону в Privacy & Security -> Microphone.")
+            Text("Для глобального hotkey и synthetic Cmd+V macOS должна разрешить приложению управление компьютером в System Settings -> Privacy & Security -> Accessibility. Для записи WAV нужен доступ к микрофону в Privacy & Security -> Microphone. Пути Python и ASR runner задаются в Debug.xcconfig.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

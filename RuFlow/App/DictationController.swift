@@ -3,7 +3,7 @@ import Foundation
 
 @MainActor
 final class DictationController: ObservableObject {
-    enum State {
+    enum State: Equatable {
         case idle
         case recording
         case saving
@@ -21,9 +21,13 @@ final class DictationController: ObservableObject {
     private let overlayController = FloatingPillWindowController()
     private let pasteService = PasteService()
     private let recordingService = AudioRecordingService()
+    private let asrService = ASRSidecarService()
+    private let asrConfiguration = ASRDebugConfiguration.current
     private var recordingTimerTask: Task<Void, Never>?
     private var errorPresentationTask: Task<Void, Never>?
+    private var asrTask: Task<Void, Never>?
     private var recordingStartedAt: Date?
+    private var completedRecordingURL: URL?
 
     init() {
         hotkeyManager.onPress = { [weak self] in
@@ -84,7 +88,7 @@ final class DictationController: ObservableObject {
         case .recording:
             return "Слушаю... \(recordingDurationText)"
         case .saving:
-            return "Сохраняю запись..."
+            return "Распознаю..."
         }
     }
 
@@ -98,6 +102,14 @@ final class DictationController: ObservableObject {
 
     var recordingsDirectoryPath: String {
         recordingService.recordingsDirectory?.path ?? "Application Support/RuFlow/Recordings"
+    }
+
+    var asrPythonPath: String {
+        asrConfiguration.pythonPathForDisplay
+    }
+
+    var asrRunnerPath: String {
+        asrConfiguration.runnerPathForDisplay
     }
 
     var runningAppPath: String {
@@ -140,9 +152,14 @@ final class DictationController: ObservableObject {
     }
 
     private func beginRecording() {
+        guard state == .idle else {
+            return
+        }
+
         clearError()
         recordingService.cancelRecording()
         stopRecordingTimer()
+        completedRecordingURL = nil
         refreshPermissionsAndHotkey()
 
         guard microphoneAuthorizationStatus == .authorized else {
@@ -168,14 +185,17 @@ final class DictationController: ObservableObject {
             return
         }
 
+        overlayController.show(message: "Останавливаю запись...")
         stopRecordingTimer()
         state = .saving
-        overlayController.show(message: "Сохраняю запись...")
 
         do {
             let outputURL = try recordingService.stopRecording()
-            pasteService.insertText(outputURL.path) { [weak self] in
-                self?.completeRecording()
+            completedRecordingURL = outputURL
+            overlayController.show(message: "Распознаю...")
+            asrTask?.cancel()
+            asrTask = Task { [weak self] in
+                await self?.transcribeAndInsert(audioURL: outputURL)
             }
         } catch {
             recordingService.cancelRecording()
@@ -186,7 +206,15 @@ final class DictationController: ObservableObject {
 
     private func cancelRecording() {
         stopRecordingTimer()
+        asrTask?.cancel()
+        asrTask = nil
         recordingService.cancelRecording()
+
+        if let completedRecordingURL {
+            try? FileManager.default.removeItem(at: completedRecordingURL)
+        }
+
+        completedRecordingURL = nil
         state = .idle
         overlayController.hide()
         hotkeyManager.markSessionInactive()
@@ -194,8 +222,47 @@ final class DictationController: ObservableObject {
 
     private func completeRecording() {
         stopRecordingTimer()
+        asrTask = nil
+        completedRecordingURL = nil
         state = .idle
         overlayController.hide()
+        hotkeyManager.markSessionInactive()
+    }
+
+    private func transcribeAndInsert(audioURL: URL) async {
+        do {
+            let result = try await asrService.transcribe(
+                audioURL: audioURL,
+                configuration: asrConfiguration
+            )
+
+            guard !Task.isCancelled, state == .saving, completedRecordingURL == audioURL else {
+                return
+            }
+
+            let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty else {
+                throw ASRSidecarError.emptyText
+            }
+
+            overlayController.show(message: "Вставляю текст...")
+            pasteService.insertText(text) { [weak self] in
+                self?.completeRecording()
+            }
+        } catch {
+            guard !Task.isCancelled else {
+                return
+            }
+
+            handleASRFailure(error, audioURL: audioURL)
+        }
+    }
+
+    private func handleASRFailure(_ error: Error, audioURL: URL) {
+        pasteService.copyTextToClipboard(audioURL.path)
+        asrTask = nil
+        completedRecordingURL = nil
+        presentError(error.localizedDescription)
         hotkeyManager.markSessionInactive()
     }
 
