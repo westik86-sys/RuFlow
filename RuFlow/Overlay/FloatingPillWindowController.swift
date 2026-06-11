@@ -4,9 +4,11 @@ import SwiftUI
 @MainActor
 final class FloatingPillWindowController {
     private let window: NSPanel
+    private let state = FloatingPillState()
     private let messageWidth: CGFloat = 240
     private let controlsWidth: CGFloat = 356
     private let height: CGFloat = 64
+    private var currentWidth: CGFloat?
 
     init() {
         window = NSPanel(
@@ -22,12 +24,12 @@ final class FloatingPillWindowController {
         window.level = .statusBar
         window.ignoresMouseEvents = false
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
-        window.contentView = NSHostingView(rootView: FloatingPillView(message: ""))
+        window.contentView = NSHostingView(rootView: FloatingPillView(state: state))
     }
 
     func show(message: String) {
-        window.contentView = NSHostingView(rootView: FloatingPillView(message: message))
-        positionWindow(width: messageWidth)
+        state.showMessage(message)
+        positionWindowIfNeeded(width: messageWidth)
         window.ignoresMouseEvents = true
         window.orderFrontRegardless()
     }
@@ -37,20 +39,27 @@ final class FloatingPillWindowController {
         onStop: @escaping () -> Void,
         onCancel: @escaping () -> Void
     ) {
-        window.contentView = NSHostingView(
-            rootView: FloatingPillView(
-                message: message,
-                onStop: onStop,
-                onCancel: onCancel
-            )
+        state.showRecording(
+            message: message,
+            onStop: onStop,
+            onCancel: onCancel
         )
-        positionWindow(width: controlsWidth)
+        positionWindowIfNeeded(width: controlsWidth)
         window.ignoresMouseEvents = false
         window.orderFrontRegardless()
     }
 
     func hide() {
         window.orderOut(nil)
+        currentWidth = nil
+    }
+
+    private func positionWindowIfNeeded(width: CGFloat) {
+        guard currentWidth != width || !window.isVisible else {
+            return
+        }
+
+        positionWindow(width: width)
     }
 
     private func positionWindow(width: CGFloat) {
@@ -58,5 +67,6 @@ final class FloatingPillWindowController {
         let x = visibleFrame.midX - width / 2
         let y = visibleFrame.minY + 84
         window.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
+        currentWidth = width
     }
 }

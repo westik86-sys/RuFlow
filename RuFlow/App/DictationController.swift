@@ -17,6 +17,7 @@ final class DictationController: ObservableObject {
     @Published private(set) var recordingDurationText = "00:00"
     @Published private(set) var lastErrorMessage: String?
 
+    private let maximumRecordingDuration: TimeInterval = 25
     private let hotkeyManager = HotkeyManager()
     private let overlayController = FloatingPillWindowController()
     private let pasteService = PasteService()
@@ -86,7 +87,7 @@ final class DictationController: ObservableObject {
         case .idle:
             return "Готово: Option + Space"
         case .recording:
-            return "Слушаю... \(recordingDurationText)"
+            return "Слушаю... осталось \(recordingDurationText)"
         case .saving:
             return "Распознаю..."
         }
@@ -292,15 +293,14 @@ final class DictationController: ObservableObject {
 
     private func updateRecordingTimer() {
         guard let recordingStartedAt else {
-            recordingDurationText = "00:00"
-            overlayController.show(message: "Слушаю... 00:00")
+            recordingDurationText = formattedDuration(Int(maximumRecordingDuration))
+            overlayController.show(message: "Слушаю... \(recordingDurationText)")
             return
         }
 
-        let elapsedSeconds = max(0, Int(Date().timeIntervalSince(recordingStartedAt)))
-        let minutes = elapsedSeconds / 60
-        let seconds = elapsedSeconds % 60
-        recordingDurationText = String(format: "%02d:%02d", minutes, seconds)
+        let elapsed = Date().timeIntervalSince(recordingStartedAt)
+        let remainingSeconds = max(0, Int(ceil(maximumRecordingDuration - elapsed)))
+        recordingDurationText = formattedDuration(remainingSeconds)
         overlayController.showRecording(
             message: "Слушаю... \(recordingDurationText)",
             onStop: { [weak self] in
@@ -310,6 +310,16 @@ final class DictationController: ObservableObject {
                 self?.cancelRecording()
             }
         )
+
+        if elapsed >= maximumRecordingDuration {
+            finishRecording()
+        }
+    }
+
+    private func formattedDuration(_ totalSeconds: Int) -> String {
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 
     private func presentError(_ message: String) {

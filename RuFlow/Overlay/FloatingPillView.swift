@@ -1,38 +1,49 @@
 import SwiftUI
 
-struct FloatingPillView: View {
-    let message: String
-    let onStop: (() -> Void)?
-    let onCancel: (() -> Void)?
+@MainActor
+final class FloatingPillState: ObservableObject {
+    @Published var message = ""
+    @Published var showsControls = false
 
-    init(
+    var onStop: (() -> Void)?
+    var onCancel: (() -> Void)?
+
+    func showMessage(_ message: String) {
+        self.message = message
+        showsControls = false
+        onStop = nil
+        onCancel = nil
+    }
+
+    func showRecording(
         message: String,
-        onStop: (() -> Void)? = nil,
-        onCancel: (() -> Void)? = nil
+        onStop: @escaping () -> Void,
+        onCancel: @escaping () -> Void
     ) {
         self.message = message
         self.onStop = onStop
         self.onCancel = onCancel
+        showsControls = true
     }
+}
 
-    private var showsControls: Bool {
-        onStop != nil || onCancel != nil
-    }
+struct FloatingPillView: View {
+    @ObservedObject var state: FloatingPillState
 
     var body: some View {
         HStack(spacing: 14) {
-            Text(message)
+            Text(state.message)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
 
-            if showsControls {
+            if state.showsControls {
                 Divider()
                     .frame(height: 24)
                     .overlay(Color.white.opacity(0.18))
 
-                if let onStop {
+                if let onStop = state.onStop {
                     Button(action: onStop) {
                         Image(systemName: "stop.fill")
                             .font(.system(size: 13, weight: .bold))
@@ -42,7 +53,7 @@ struct FloatingPillView: View {
                     .help("Остановить запись")
                 }
 
-                if let onCancel {
+                if let onCancel = state.onCancel {
                     Button(action: onCancel) {
                         Image(systemName: "xmark")
                             .font(.system(size: 13, weight: .bold))
@@ -53,7 +64,7 @@ struct FloatingPillView: View {
                 }
             }
         }
-        .padding(.horizontal, showsControls ? 16 : 24)
+        .padding(.horizontal, state.showsControls ? 16 : 24)
         .frame(height: 52)
         .background(
             Capsule()
