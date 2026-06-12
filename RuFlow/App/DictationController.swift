@@ -126,9 +126,7 @@ final class DictationController: ObservableObject {
     }
 
     func refreshPermissionsAndHotkey() {
-        isAccessibilityTrusted = AccessibilityPermission.isTrusted
-        microphoneAuthorizationStatus = MicrophonePermission.authorizationStatus
-        hasAvailableMicrophone = MicrophonePermission.hasAvailableInput
+        refreshPermissionState()
         isHotkeyReady = hotkeyManager.restart()
     }
 
@@ -161,7 +159,7 @@ final class DictationController: ObservableObject {
         recordingService.cancelRecording()
         stopRecordingTimer()
         completedRecordingURL = nil
-        refreshPermissionsAndHotkey()
+        refreshPermissionState()
 
         guard microphoneAuthorizationStatus == .authorized else {
             requestMicrophoneAccessIfNeeded()
@@ -302,7 +300,7 @@ final class DictationController: ObservableObject {
         let remainingSeconds = max(0, Int(ceil(maximumRecordingDuration - elapsed)))
         recordingDurationText = formattedDuration(remainingSeconds)
         overlayController.showRecording(
-            message: "Слушаю... \(recordingDurationText)",
+            message: compactFormattedDuration(remainingSeconds),
             onStop: { [weak self] in
                 self?.stopRecordingFromUserAction()
             },
@@ -320,6 +318,18 @@ final class DictationController: ObservableObject {
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%02d:%02d", minutes, seconds)
+    }
+
+    private func compactFormattedDuration(_ totalSeconds: Int) -> String {
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    private func refreshPermissionState() {
+        isAccessibilityTrusted = AccessibilityPermission.isTrusted
+        microphoneAuthorizationStatus = MicrophonePermission.authorizationStatus
+        hasAvailableMicrophone = MicrophonePermission.hasAvailableInput
     }
 
     private func presentError(_ message: String) {

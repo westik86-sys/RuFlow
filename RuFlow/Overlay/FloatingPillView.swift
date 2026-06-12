@@ -29,42 +29,57 @@ final class FloatingPillState: ObservableObject {
 
 struct FloatingPillView: View {
     @ObservedObject var state: FloatingPillState
+    private let waveformBarHeights: [CGFloat] = [
+        6, 12, 8, 14, 26, 20, 32, 26, 30, 18,
+        22, 14, 6, 10, 14, 24, 32, 30, 24, 14
+    ]
 
     var body: some View {
+        if state.showsControls {
+            recordingPill
+        } else {
+            messagePill
+        }
+    }
+
+    private var recordingPill: some View {
+        HStack(spacing: 0) {
+            HStack(spacing: 3) {
+                ForEach(waveformBarHeights.indices, id: \.self) { index in
+                    Capsule()
+                        .fill(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255))
+                        .frame(width: 3, height: waveformBarHeights[index])
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Text(state.message)
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .tracking(0.357)
+                .foregroundStyle(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255))
+                .lineLimit(1)
+        }
+        .padding(.leading, 20)
+        .padding(.trailing, 21)
+        .frame(width: 223, height: 65)
+        .background(pillBackground(cornerRadius: 24))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255).opacity(0.5), lineWidth: 0.5)
+        )
+    }
+
+    private var messagePill: some View {
         HStack(spacing: 14) {
             Text(state.message)
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
-
-            if state.showsControls {
-                Divider()
-                    .frame(height: 24)
-                    .overlay(Color.white.opacity(0.18))
-
-                if let onStop = state.onStop {
-                    Button(action: onStop) {
-                        Image(systemName: "stop.fill")
-                            .font(.system(size: 13, weight: .bold))
-                            .frame(width: 30, height: 30)
-                    }
-                    .buttonStyle(PillIconButtonStyle())
-                    .help("Остановить запись")
-                }
-
-                if let onCancel = state.onCancel {
-                    Button(action: onCancel) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 13, weight: .bold))
-                            .frame(width: 30, height: 30)
-                    }
-                    .buttonStyle(PillIconButtonStyle())
-                    .help("Отменить запись")
-                }
-            }
         }
-        .padding(.horizontal, state.showsControls ? 16 : 24)
+        .padding(.horizontal, 24)
         .frame(height: 52)
         .background(
             Capsule()
@@ -76,16 +91,13 @@ struct FloatingPillView: View {
         )
         .shadow(color: Color.black.opacity(0.22), radius: 18, y: 8)
     }
-}
 
-private struct PillIconButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .foregroundStyle(.white)
-            .background(
-                Circle()
-                    .fill(configuration.isPressed ? Color.white.opacity(0.26) : Color.white.opacity(0.14))
+    private func pillBackground(cornerRadius: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(Color(red: 54 / 255, green: 54 / 255, blue: 54 / 255).opacity(0.7))
             )
-            .contentShape(Circle())
     }
 }

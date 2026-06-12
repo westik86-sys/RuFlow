@@ -6,8 +6,8 @@ final class FloatingPillWindowController {
     private let window: NSPanel
     private let state = FloatingPillState()
     private let messageWidth: CGFloat = 240
-    private let controlsWidth: CGFloat = 356
-    private let height: CGFloat = 64
+    private let recordingWidth: CGFloat = 223
+    private let height: CGFloat = 65
     private var currentWidth: CGFloat?
 
     init() {
@@ -44,8 +44,8 @@ final class FloatingPillWindowController {
             onStop: onStop,
             onCancel: onCancel
         )
-        positionWindowIfNeeded(width: controlsWidth)
-        window.ignoresMouseEvents = false
+        positionWindowIfNeeded(width: recordingWidth)
+        window.ignoresMouseEvents = true
         window.orderFrontRegardless()
     }
 
