@@ -91,6 +91,8 @@ struct FloatingPillView: View {
                 .tracking(0.357)
                 .foregroundStyle(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255))
                 .lineLimit(1)
+                .monospacedDigit()
+                .frame(width: 50, alignment: .trailing)
         }
         .padding(.leading, 20)
         .padding(.trailing, 21)
