@@ -184,14 +184,13 @@ final class DictationController: ObservableObject {
             return
         }
 
-        overlayController.show(message: "Останавливаю запись...")
+        overlayController.showLoader()
         stopRecordingTimer()
         state = .saving
 
         do {
             let outputURL = try recordingService.stopRecording()
             completedRecordingURL = outputURL
-            overlayController.show(message: "Распознаю...")
             asrTask?.cancel()
             asrTask = Task { [weak self] in
                 await self?.transcribeAndInsert(audioURL: outputURL)
@@ -244,7 +243,6 @@ final class DictationController: ObservableObject {
                 throw ASRSidecarError.emptyText
             }
 
-            overlayController.show(message: "Вставляю текст...")
             pasteService.insertText(text) { [weak self] in
                 self?.completeRecording()
             }
@@ -292,7 +290,6 @@ final class DictationController: ObservableObject {
     private func updateRecordingTimer() {
         guard let recordingStartedAt else {
             recordingDurationText = formattedDuration(Int(maximumRecordingDuration))
-            overlayController.show(message: "Слушаю... \(recordingDurationText)")
             return
         }
 
@@ -336,7 +333,7 @@ final class DictationController: ObservableObject {
     private func presentError(_ message: String) {
         state = .idle
         lastErrorMessage = message
-        overlayController.show(message: message)
+        overlayController.showError(message: message)
 
         errorPresentationTask?.cancel()
         errorPresentationTask = Task { @MainActor [weak self] in

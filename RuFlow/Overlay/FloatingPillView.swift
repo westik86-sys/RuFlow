@@ -4,14 +4,30 @@ import SwiftUI
 final class FloatingPillState: ObservableObject {
     @Published var message = ""
     @Published var showsControls = false
+    @Published var showsLoader = false
+    @Published var showsError = false
+    @Published var errorMessage = ""
     @Published var recordingLevel = 0.0
 
     var onStop: (() -> Void)?
     var onCancel: (() -> Void)?
 
-    func showMessage(_ message: String) {
-        self.message = message
+    func showError(_ message: String) {
+        self.message = ""
+        errorMessage = message
         showsControls = false
+        showsLoader = false
+        showsError = true
+        recordingLevel = 0
+        onStop = nil
+        onCancel = nil
+    }
+
+    func showLoader() {
+        message = ""
+        showsControls = false
+        showsLoader = true
+        showsError = false
         recordingLevel = 0
         onStop = nil
         onCancel = nil
@@ -28,6 +44,8 @@ final class FloatingPillState: ObservableObject {
         self.onStop = onStop
         self.onCancel = onCancel
         showsControls = true
+        showsLoader = false
+        showsError = false
     }
 }
 
@@ -39,11 +57,21 @@ struct FloatingPillView: View {
     ]
 
     var body: some View {
-        if state.showsControls {
-            recordingPill
-        } else {
-            messagePill
+        ZStack {
+            if state.showsLoader {
+                loadingPill
+                    .transition(.scale(scale: 0.88).combined(with: .opacity))
+            } else if state.showsControls {
+                recordingPill
+                    .transition(.opacity)
+            } else if state.showsError {
+                errorPill
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: 0.22), value: state.showsControls)
+        .animation(.easeInOut(duration: 0.22), value: state.showsLoader)
+        .animation(.easeInOut(duration: 0.22), value: state.showsError)
     }
 
     private var recordingPill: some View {
@@ -76,25 +104,39 @@ struct FloatingPillView: View {
         .animation(.easeOut(duration: 0.08), value: state.recordingLevel)
     }
 
-    private var messagePill: some View {
-        HStack(spacing: 14) {
-            Text(state.message)
-                .font(.system(size: 16, weight: .semibold))
+    private var loadingPill: some View {
+        LoadingSpinner()
+            .frame(width: 24, height: 24)
+            .frame(width: 65, height: 65)
+            .background(pillBackground(cornerRadius: 24))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255).opacity(0.5), lineWidth: 0.5)
+            )
+    }
+
+    private var errorPill: some View {
+        HStack {
+            Text(state.errorMessage)
+                .font(.system(size: 20, weight: .medium, design: .default))
+                .tracking(0.38)
                 .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 342, alignment: .leading)
+
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 24)
-        .frame(height: 52)
-        .background(
-            Capsule()
-                .fill(Color.black.opacity(0.84))
-        )
+        .padding(.leading, 20)
+        .padding(.trailing, 21)
+        .frame(width: 383, height: 89, alignment: .leading)
+        .background(pillBackground(cornerRadius: 24))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            Capsule()
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255).opacity(0.5), lineWidth: 0.5)
         )
-        .shadow(color: Color.black.opacity(0.22), radius: 18, y: 8)
     }
 
     private func pillBackground(cornerRadius: CGFloat) -> some View {
@@ -112,5 +154,23 @@ struct FloatingPillView: View {
         let normalizedHeight = (waveformBarHeights[index] - minimumHeight) / (maximumHeight - minimumHeight)
         let level = CGFloat(state.recordingLevel)
         return minimumHeight + (maximumHeight - minimumHeight) * normalizedHeight * level
+    }
+}
+
+private struct LoadingSpinner: View {
+    @State private var isRotating = false
+
+    var body: some View {
+        Circle()
+            .trim(from: 0.08, to: 0.8)
+            .stroke(
+                Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255),
+                style: StrokeStyle(lineWidth: 2, lineCap: .round)
+            )
+            .rotationEffect(.degrees(isRotating ? 360 : 0))
+            .animation(.linear(duration: 0.85).repeatForever(autoreverses: false), value: isRotating)
+            .onAppear {
+                isRotating = true
+            }
     }
 }
