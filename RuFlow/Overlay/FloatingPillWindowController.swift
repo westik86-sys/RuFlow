@@ -36,11 +36,13 @@ final class FloatingPillWindowController {
 
     func showRecording(
         message: String,
+        level: Double,
         onStop: @escaping () -> Void,
         onCancel: @escaping () -> Void
     ) {
         state.showRecording(
             message: message,
+            level: level,
             onStop: onStop,
             onCancel: onCancel
         )

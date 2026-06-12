@@ -4,6 +4,7 @@ import SwiftUI
 final class FloatingPillState: ObservableObject {
     @Published var message = ""
     @Published var showsControls = false
+    @Published var recordingLevel = 0.0
 
     var onStop: (() -> Void)?
     var onCancel: (() -> Void)?
@@ -11,16 +12,19 @@ final class FloatingPillState: ObservableObject {
     func showMessage(_ message: String) {
         self.message = message
         showsControls = false
+        recordingLevel = 0
         onStop = nil
         onCancel = nil
     }
 
     func showRecording(
         message: String,
+        level: Double,
         onStop: @escaping () -> Void,
         onCancel: @escaping () -> Void
     ) {
         self.message = message
+        recordingLevel = min(max(level, 0), 1)
         self.onStop = onStop
         self.onCancel = onCancel
         showsControls = true
@@ -48,7 +52,7 @@ struct FloatingPillView: View {
                 ForEach(waveformBarHeights.indices, id: \.self) { index in
                     Capsule()
                         .fill(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255))
-                        .frame(width: 3, height: waveformBarHeights[index])
+                        .frame(width: 3, height: waveformBarHeight(at: index))
                 }
             }
 
@@ -69,6 +73,7 @@ struct FloatingPillView: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255).opacity(0.5), lineWidth: 0.5)
         )
+        .animation(.easeOut(duration: 0.08), value: state.recordingLevel)
     }
 
     private var messagePill: some View {
@@ -99,5 +104,13 @@ struct FloatingPillView: View {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .fill(Color(red: 54 / 255, green: 54 / 255, blue: 54 / 255).opacity(0.7))
             )
+    }
+
+    private func waveformBarHeight(at index: Int) -> CGFloat {
+        let minimumHeight: CGFloat = 3
+        let maximumHeight: CGFloat = 32
+        let normalizedHeight = (waveformBarHeights[index] - minimumHeight) / (maximumHeight - minimumHeight)
+        let level = CGFloat(state.recordingLevel)
+        return minimumHeight + (maximumHeight - minimumHeight) * normalizedHeight * level
     }
 }

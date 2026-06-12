@@ -84,7 +84,7 @@ final class AudioRecordingService: NSObject {
 
         let outputURL = directoryURL.appendingPathComponent(Self.fileName(), isDirectory: false)
         let recorder = try makeRecorder(outputURL: outputURL)
-        recorder.isMeteringEnabled = false
+        recorder.isMeteringEnabled = true
         recorder.prepareToRecord()
 
         guard recorder.record() else {
@@ -93,6 +93,26 @@ final class AudioRecordingService: NSObject {
 
         self.recorder = recorder
         currentFileURL = outputURL
+    }
+
+    func normalizedMeterLevel() -> Double {
+        guard let recorder, recorder.isRecording else {
+            return 0
+        }
+
+        recorder.updateMeters()
+
+        let minimumDecibels: Float = -55
+        let maximumDecibels: Float = -8
+        let averagePower = recorder.averagePower(forChannel: 0)
+
+        guard averagePower > minimumDecibels else {
+            return 0
+        }
+
+        let clampedPower = min(averagePower, maximumDecibels)
+        let linearLevel = Double((clampedPower - minimumDecibels) / (maximumDecibels - minimumDecibels))
+        return pow(linearLevel, 0.65)
     }
 
     func stopRecording() throws -> URL {

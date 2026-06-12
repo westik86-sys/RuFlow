@@ -274,7 +274,7 @@ final class DictationController: ObservableObject {
                 self?.updateRecordingTimer()
 
                 do {
-                    try await Task.sleep(for: .milliseconds(200))
+                    try await Task.sleep(for: .milliseconds(80))
                 } catch {
                     return
                 }
@@ -301,6 +301,7 @@ final class DictationController: ObservableObject {
         recordingDurationText = formattedDuration(remainingSeconds)
         overlayController.showRecording(
             message: compactFormattedDuration(remainingSeconds),
+            level: recordingService.normalizedMeterLevel(),
             onStop: { [weak self] in
                 self?.stopRecordingFromUserAction()
             },
