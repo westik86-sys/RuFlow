@@ -29,6 +29,7 @@ final class DictationController: ObservableObject {
     private var asrTask: Task<Void, Never>?
     private var recordingStartedAt: Date?
     private var completedRecordingURL: URL?
+    private var lastDisplayedRemainingSeconds: Int?
 
     init() {
         hotkeyManager.onPress = { [weak self] in
@@ -238,9 +239,7 @@ final class DictationController: ObservableObject {
                 return
             }
 
-            let text = UserDictionary
-                .apply(to: result.text)
-                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else {
                 throw ASRSidecarError.emptyText
             }
@@ -267,6 +266,7 @@ final class DictationController: ObservableObject {
 
     private func startRecordingTimer() {
         recordingStartedAt = Date()
+        lastDisplayedRemainingSeconds = nil
         updateRecordingTimer()
 
         recordingTimerTask = Task { @MainActor [weak self] in
@@ -274,7 +274,7 @@ final class DictationController: ObservableObject {
                 self?.updateRecordingTimer()
 
                 do {
-                    try await Task.sleep(for: .milliseconds(80))
+                    try await Task.sleep(for: .milliseconds(60))
                 } catch {
                     return
                 }
@@ -286,6 +286,7 @@ final class DictationController: ObservableObject {
         recordingTimerTask?.cancel()
         recordingTimerTask = nil
         recordingStartedAt = nil
+        lastDisplayedRemainingSeconds = nil
         recordingDurationText = "00:00"
     }
 
@@ -297,7 +298,12 @@ final class DictationController: ObservableObject {
 
         let elapsed = Date().timeIntervalSince(recordingStartedAt)
         let remainingSeconds = max(0, Int(ceil(maximumRecordingDuration - elapsed)))
-        recordingDurationText = formattedDuration(remainingSeconds)
+
+        if lastDisplayedRemainingSeconds != remainingSeconds {
+            recordingDurationText = formattedDuration(remainingSeconds)
+            lastDisplayedRemainingSeconds = remainingSeconds
+        }
+
         overlayController.showRecording(
             message: compactFormattedDuration(remainingSeconds),
             level: recordingService.normalizedMeterLevel(),

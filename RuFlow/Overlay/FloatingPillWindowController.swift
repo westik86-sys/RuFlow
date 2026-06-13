@@ -58,12 +58,16 @@ final class FloatingPillWindowController {
             onCancel: onCancel
         )
         positionWindowIfNeeded(width: recordingWidth, height: standardHeight, animated: false)
-        window.ignoresMouseEvents = true
-        window.orderFrontRegardless()
+
+        if !window.isVisible {
+            window.ignoresMouseEvents = true
+            window.orderFrontRegardless()
+        }
     }
 
     func hide() {
         window.orderOut(nil)
+        state.hide()
         currentWidth = nil
         currentHeight = nil
     }

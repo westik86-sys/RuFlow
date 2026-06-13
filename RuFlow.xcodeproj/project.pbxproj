@@ -10,7 +10,6 @@
 		8A7F1D022C6A040100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A7F1D012C6A040100000001 /* Assets.xcassets */; };
 		8A7F1C092C6A030100000001 /* ASRDebugConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1C032C6A030100000001 /* ASRDebugConfiguration.swift */; };
 		8A7F1C0A2C6A030100000001 /* ASRSidecarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1C042C6A030100000001 /* ASRSidecarService.swift */; };
-		8A7F1E032C6A050100000001 /* UserDictionary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1E022C6A050100000001 /* UserDictionary.swift */; };
 		8A7F1A782C6A010100000001 /* RuFlowApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1A692C6A010100000001 /* RuFlowApp.swift */; };
 		8A7F1A792C6A010100000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1A6A2C6A010100000001 /* AppDelegate.swift */; };
 		8A7F1A7A2C6A010100000001 /* DictationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1A6B2C6A010100000001 /* DictationController.swift */; };
@@ -32,7 +31,6 @@
 		8A7F1C022C6A030100000001 /* runner.py */ = {isa = PBXFileReference; lastKnownFileType = text.script.python; path = runner.py; sourceTree = "<group>"; };
 		8A7F1C032C6A030100000001 /* ASRDebugConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASRDebugConfiguration.swift; sourceTree = "<group>"; };
 		8A7F1C042C6A030100000001 /* ASRSidecarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ASRSidecarService.swift; sourceTree = "<group>"; };
-		8A7F1E022C6A050100000001 /* UserDictionary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDictionary.swift; sourceTree = "<group>"; };
 		8A7F1A5E2C6A010100000001 /* RuFlow.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RuFlow.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8A7F1A692C6A010100000001 /* RuFlowApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuFlowApp.swift; sourceTree = "<group>"; };
 		8A7F1A6A2C6A010100000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -87,7 +85,6 @@
 				8A7F1A732C6A010100000001 /* Hotkey */,
 				8A7F1A742C6A010100000001 /* Overlay */,
 				8A7F1A752C6A010100000001 /* Paste */,
-				8A7F1E012C6A050100000001 /* PostProcessing */,
 				8A7F1A762C6A010100000001 /* Settings */,
 			);
 			path = RuFlow;
@@ -163,14 +160,6 @@
 				8A7F1A712C6A010100000001 /* ClipboardSnapshot.swift */,
 			);
 			path = Paste;
-			sourceTree = "<group>";
-		};
-		8A7F1E012C6A050100000001 /* PostProcessing */ = {
-			isa = PBXGroup;
-			children = (
-				8A7F1E022C6A050100000001 /* UserDictionary.swift */,
-			);
-			path = PostProcessing;
 			sourceTree = "<group>";
 		};
 		8A7F1A762C6A010100000001 /* Settings */ = {
@@ -252,7 +241,6 @@
 			files = (
 				8A7F1C092C6A030100000001 /* ASRDebugConfiguration.swift in Sources */,
 				8A7F1C0A2C6A030100000001 /* ASRSidecarService.swift in Sources */,
-				8A7F1E032C6A050100000001 /* UserDictionary.swift in Sources */,
 				8A7F1A782C6A010100000001 /* RuFlowApp.swift in Sources */,
 				8A7F1A792C6A010100000001 /* AppDelegate.swift in Sources */,
 				8A7F1A7A2C6A010100000001 /* DictationController.swift in Sources */,

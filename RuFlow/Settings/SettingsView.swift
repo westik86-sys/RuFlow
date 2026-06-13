@@ -2,8 +2,6 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var dictationController: DictationController
-    @AppStorage(UserDictionary.enabledKey) private var isUserDictionaryEnabled = UserDictionary.defaultIsEnabled
-    @State private var dictionaryEntries = UserDictionary.entries
 
     var body: some View {
         ScrollView {
@@ -85,8 +83,6 @@ struct SettingsView: View {
                     }
                 }
 
-                dictionarySection
-
                 Text("Для глобального hotkey и synthetic Cmd+V macOS должна разрешить приложению управление компьютером в System Settings -> Privacy & Security -> Accessibility. Для записи WAV нужен доступ к микрофону в Privacy & Security -> Microphone. Пути Python и ASR runner задаются в Debug.xcconfig.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -103,12 +99,6 @@ struct SettingsView: View {
         }
         .frame(width: 680)
         .frame(minHeight: 560)
-        .onChange(of: dictionaryEntries) { _, entries in
-            UserDictionary.entries = entries
-        }
-        .onAppear {
-            dictionaryEntries = UserDictionary.entries
-        }
     }
 
     private var permissionButtons: some View {
@@ -136,76 +126,5 @@ struct SettingsView: View {
         Button("Проверить снова") {
             dictationController.refreshPermissionsAndHotkey()
         }
-    }
-
-    private var dictionarySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Divider()
-
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Словарь")
-                        .font(.headline)
-                    Text("Пользовательские правила применяются после встроенного словаря.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                Toggle("Включить", isOn: $isUserDictionaryEnabled)
-                    .toggleStyle(.switch)
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Text("Что распознано")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text("Замена")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Color.clear.frame(width: 28, height: 1)
-                }
-
-                ForEach($dictionaryEntries) { $entry in
-                    HStack(spacing: 8) {
-                        TextField("эл эл эм", text: $entry.source)
-                            .textFieldStyle(.roundedBorder)
-                        Image(systemName: "arrow.right")
-                            .foregroundStyle(.secondary)
-                            .frame(width: 18)
-                        TextField("LLM", text: $entry.replacement)
-                            .textFieldStyle(.roundedBorder)
-                        Button {
-                            removeDictionaryEntry(entry)
-                        } label: {
-                            Image(systemName: "trash")
-                        }
-                        .buttonStyle(.borderless)
-                        .help("Удалить правило")
-                        .frame(width: 28)
-                    }
-                }
-
-                if dictionaryEntries.isEmpty {
-                    Text("Пользовательских правил пока нет.")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            Button {
-                dictionaryEntries.append(UserDictionaryEntry())
-            } label: {
-                Label("Добавить правило", systemImage: "plus")
-            }
-        }
-    }
-
-    private func removeDictionaryEntry(_ entry: UserDictionaryEntry) {
-        dictionaryEntries.removeAll { $0.id == entry.id }
     }
 }

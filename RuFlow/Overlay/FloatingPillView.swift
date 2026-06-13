@@ -7,7 +7,7 @@ final class FloatingPillState: ObservableObject {
     @Published var showsLoader = false
     @Published var showsError = false
     @Published var errorMessage = ""
-    @Published var recordingLevel = 0.0
+    @Published var waveformLevels = Array(repeating: 0.0, count: 20)
 
     var onStop: (() -> Void)?
     var onCancel: (() -> Void)?
@@ -18,7 +18,7 @@ final class FloatingPillState: ObservableObject {
         showsControls = false
         showsLoader = false
         showsError = true
-        recordingLevel = 0
+        resetWaveform()
         onStop = nil
         onCancel = nil
     }
@@ -28,7 +28,7 @@ final class FloatingPillState: ObservableObject {
         showsControls = false
         showsLoader = true
         showsError = false
-        recordingLevel = 0
+        resetWaveform()
         onStop = nil
         onCancel = nil
     }
@@ -39,22 +39,64 @@ final class FloatingPillState: ObservableObject {
         onStop: @escaping () -> Void,
         onCancel: @escaping () -> Void
     ) {
-        self.message = message
-        recordingLevel = min(max(level, 0), 1)
-        self.onStop = onStop
-        self.onCancel = onCancel
-        showsControls = true
+        let boundedLevel = min(max(level, 0), 1)
+
+        if self.message != message {
+            self.message = message
+        }
+
+        appendWaveformLevel(boundedLevel)
+
+        if self.onStop == nil {
+            self.onStop = onStop
+        }
+
+        if self.onCancel == nil {
+            self.onCancel = onCancel
+        }
+
+        if !showsControls {
+            showsControls = true
+        }
+
+        if showsLoader {
+            showsLoader = false
+        }
+
+        if showsError {
+            showsError = false
+        }
+    }
+
+    func hide() {
+        message = ""
+        errorMessage = ""
+        showsControls = false
         showsLoader = false
         showsError = false
+        resetWaveform()
+        onStop = nil
+        onCancel = nil
+    }
+
+    private func appendWaveformLevel(_ level: Double) {
+        let gatedLevel = level < 0.035 ? 0 : level
+        let previousLevel = waveformLevels.last ?? 0
+        let smoothing = gatedLevel > previousLevel ? 0.72 : 0.24
+        let smoothedLevel = previousLevel + (gatedLevel - previousLevel) * smoothing
+        let boundedLevel = min(max(smoothedLevel, 0), 1)
+
+        waveformLevels.removeFirst()
+        waveformLevels.append(boundedLevel)
+    }
+
+    private func resetWaveform() {
+        waveformLevels = Array(repeating: 0.0, count: waveformLevels.count)
     }
 }
 
 struct FloatingPillView: View {
     @ObservedObject var state: FloatingPillState
-    private let waveformBarHeights: [CGFloat] = [
-        6, 12, 8, 14, 26, 20, 32, 26, 30, 18,
-        22, 14, 6, 10, 14, 24, 32, 30, 24, 14
-    ]
 
     var body: some View {
         ZStack {
@@ -77,7 +119,7 @@ struct FloatingPillView: View {
     private var recordingPill: some View {
         HStack(spacing: 0) {
             HStack(spacing: 3) {
-                ForEach(waveformBarHeights.indices, id: \.self) { index in
+                ForEach(state.waveformLevels.indices, id: \.self) { index in
                     Capsule()
                         .fill(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255))
                         .frame(width: 3, height: waveformBarHeight(at: index))
@@ -103,7 +145,7 @@ struct FloatingPillView: View {
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .stroke(Color(red: 248 / 255, green: 248 / 255, blue: 248 / 255).opacity(0.5), lineWidth: 0.5)
         )
-        .animation(.easeOut(duration: 0.08), value: state.recordingLevel)
+        .animation(.easeOut(duration: 0.07), value: state.waveformLevels)
     }
 
     private var loadingPill: some View {
@@ -153,9 +195,8 @@ struct FloatingPillView: View {
     private func waveformBarHeight(at index: Int) -> CGFloat {
         let minimumHeight: CGFloat = 3
         let maximumHeight: CGFloat = 32
-        let normalizedHeight = (waveformBarHeights[index] - minimumHeight) / (maximumHeight - minimumHeight)
-        let level = CGFloat(state.recordingLevel)
-        return minimumHeight + (maximumHeight - minimumHeight) * normalizedHeight * level
+        let level = CGFloat(state.waveformLevels[index])
+        return minimumHeight + (maximumHeight - minimumHeight) * level
     }
 }
 
