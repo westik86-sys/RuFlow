@@ -238,7 +238,9 @@ final class DictationController: ObservableObject {
                 return
             }
 
-            let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = UserDictionary
+                .apply(to: result.text)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
             guard !text.isEmpty else {
                 throw ASRSidecarError.emptyText
             }

@@ -31,6 +31,8 @@ private struct ASRSidecarResponse: Decodable {
 enum ASRSidecarError: LocalizedError, Sendable {
     case pythonPathMissing
     case runnerPathMissing
+    case sidecarNotFound(String)
+    case modelDirectoryNotFound(String)
     case pythonNotFound(String)
     case runnerNotFound(String)
     case audioFileMissing(String)
@@ -46,6 +48,10 @@ enum ASRSidecarError: LocalizedError, Sendable {
             return "ASR: путь к Python не задан"
         case .runnerPathMissing:
             return "ASR: путь к runner.py не задан"
+        case .sidecarNotFound(let path):
+            return "ASR: sidecar не найден: \(path)"
+        case .modelDirectoryNotFound(let path):
+            return "ASR: модель не найдена: \(path)"
         case .pythonNotFound(let path):
             return "ASR: Python не найден: \(path)"
         case .runnerNotFound(let path):
@@ -94,23 +100,9 @@ final class ASRSidecarService: Sendable {
         let fileManager = FileManager.default
         let pythonPath = configuration.pythonPath
         let runnerPath = configuration.runnerPath
+        let sidecarExecutablePath = configuration.sidecarExecutablePath
+        let modelDirectoryPath = configuration.modelDirectoryPath
         let audioPath = audioURL.path
-
-        guard !pythonPath.isEmpty else {
-            throw ASRSidecarError.pythonPathMissing
-        }
-
-        guard !runnerPath.isEmpty else {
-            throw ASRSidecarError.runnerPathMissing
-        }
-
-        guard fileManager.isExecutableFile(atPath: pythonPath) else {
-            throw ASRSidecarError.pythonNotFound(pythonPath)
-        }
-
-        guard fileManager.fileExists(atPath: runnerPath) else {
-            throw ASRSidecarError.runnerNotFound(runnerPath)
-        }
 
         guard fileManager.fileExists(atPath: audioPath) else {
             throw ASRSidecarError.audioFileMissing(audioPath)
@@ -120,9 +112,50 @@ final class ASRSidecarService: Sendable {
         let stdout = Pipe()
         let stderr = Pipe()
 
-        process.executableURL = URL(fileURLWithPath: pythonPath)
-        process.arguments = [runnerPath, audioPath]
-        process.currentDirectoryURL = URL(fileURLWithPath: runnerPath).deletingLastPathComponent()
+        if !sidecarExecutablePath.isEmpty {
+            guard fileManager.isExecutableFile(atPath: sidecarExecutablePath) else {
+                throw ASRSidecarError.sidecarNotFound(sidecarExecutablePath)
+            }
+
+            var isModelDirectory = ObjCBool(false)
+            guard !modelDirectoryPath.isEmpty,
+                  fileManager.fileExists(atPath: modelDirectoryPath, isDirectory: &isModelDirectory),
+                  isModelDirectory.boolValue else {
+                throw ASRSidecarError.modelDirectoryNotFound(modelDirectoryPath)
+            }
+
+            process.executableURL = URL(fileURLWithPath: sidecarExecutablePath)
+            process.arguments = [audioPath]
+            process.currentDirectoryURL = URL(fileURLWithPath: sidecarExecutablePath).deletingLastPathComponent()
+        } else {
+            guard !pythonPath.isEmpty else {
+                throw ASRSidecarError.pythonPathMissing
+            }
+
+            guard !runnerPath.isEmpty else {
+                throw ASRSidecarError.runnerPathMissing
+            }
+
+            guard fileManager.isExecutableFile(atPath: pythonPath) else {
+                throw ASRSidecarError.pythonNotFound(pythonPath)
+            }
+
+            guard fileManager.fileExists(atPath: runnerPath) else {
+                throw ASRSidecarError.runnerNotFound(runnerPath)
+            }
+
+            process.executableURL = URL(fileURLWithPath: pythonPath)
+            process.arguments = [runnerPath, audioPath]
+            process.currentDirectoryURL = URL(fileURLWithPath: runnerPath).deletingLastPathComponent()
+        }
+
+        if !modelDirectoryPath.isEmpty {
+            var environment = ProcessInfo.processInfo.environment
+            environment["RUFLOW_GIGAAM_MODEL_DIR"] = modelDirectoryPath
+            environment["HF_HUB_OFFLINE"] = "1"
+            process.environment = environment
+        }
+
         process.standardOutput = stdout
         process.standardError = stderr
 
