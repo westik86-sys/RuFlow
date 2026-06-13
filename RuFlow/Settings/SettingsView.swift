@@ -12,8 +12,14 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("RuFlow")
                         .font(.title2.weight(.semibold))
-                    Text("Локальный push-to-talk диктовщик")
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 0) {
+                        Text("Это как ")
+                            .foregroundStyle(.secondary)
+                        Link("wisprflow.ai", destination: URL(string: "https://wisprflow.ai/")!)
+                            .pointingHandCursor()
+                        Text(", только бесплатно и локально на вашем Mac")
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Divider()
@@ -74,7 +80,12 @@ struct SettingsView: View {
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Spacer(minLength: 24)
+
+                settingsFooter
             }
+            .frame(maxWidth: .infinity, minHeight: 512, alignment: .topLeading)
             .padding(24)
         }
         .frame(width: 680)
@@ -88,6 +99,22 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionsAndUpdatePolling()
         }
+    }
+
+    private var settingsFooter: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 0) {
+                Text("Запилено мной ")
+                    .foregroundStyle(.secondary)
+                Link("@korostelevpavel", destination: URL(string: "https://t.me/korostelevpavel")!)
+                    .pointingHandCursor()
+            }
+
+            Text("Если нашли баг или хотите предложить улучшение — напишите мне 🤙🏻")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .font(.body)
     }
 
     private var accessibilityPermissionButton: some View {
@@ -118,6 +145,7 @@ struct SettingsView: View {
                         .multilineTextAlignment(.leading)
                 }
                 .buttonStyle(.link)
+                .pointingHandCursor()
                 .help("Открыть папку временных аудиофайлов")
             }
 
@@ -216,5 +244,47 @@ struct SettingsView: View {
         }
 
         NSWorkspace.shared.open(directoryURL)
+    }
+}
+
+private struct PointingHandCursorModifier: ViewModifier {
+    @State private var isPointingHandCursorActive = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { isHovering in
+                if isHovering {
+                    pushPointingHandCursorIfNeeded()
+                } else {
+                    popPointingHandCursorIfNeeded()
+                }
+            }
+            .onDisappear {
+                popPointingHandCursorIfNeeded()
+            }
+    }
+
+    private func pushPointingHandCursorIfNeeded() {
+        guard !isPointingHandCursorActive else {
+            return
+        }
+
+        NSCursor.pointingHand.push()
+        isPointingHandCursorActive = true
+    }
+
+    private func popPointingHandCursorIfNeeded() {
+        guard isPointingHandCursorActive else {
+            return
+        }
+
+        NSCursor.pop()
+        isPointingHandCursorActive = false
+    }
+}
+
+private extension View {
+    func pointingHandCursor() -> some View {
+        modifier(PointingHandCursorModifier())
     }
 }
