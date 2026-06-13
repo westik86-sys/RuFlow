@@ -1,3 +1,4 @@
+import AVFoundation
 import SwiftUI
 
 struct SettingsView: View {
@@ -23,21 +24,23 @@ struct SettingsView: View {
                     }
 
                     GridRow {
-                        Text("Статус")
-                            .foregroundStyle(.secondary)
-                        Text(dictationController.menuStatusText)
-                    }
-
-                    GridRow {
                         Text("Accessibility")
                             .foregroundStyle(.secondary)
-                        Text(dictationController.accessibilityStatusText)
+                        if dictationController.isAccessibilityTrusted {
+                            Text(dictationController.accessibilityStatusText)
+                        } else {
+                            accessibilityPermissionButton
+                        }
                     }
 
                     GridRow {
                         Text("Микрофон")
                             .foregroundStyle(.secondary)
-                        Text(dictationController.microphoneStatusText)
+                        if dictationController.microphoneAuthorizationStatus == .authorized {
+                            Text(dictationController.microphoneStatusText)
+                        } else {
+                            microphonePermissionButton
+                        }
                     }
 
                     GridRow {
@@ -73,15 +76,7 @@ struct SettingsView: View {
                     }
                 }
 
-                ViewThatFits {
-                    permissionButtons
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        accessibilityButton
-                        microphoneButton
-                        refreshButton
-                    }
-                }
+                refreshButton
 
                 Text("Для глобального hotkey и synthetic Cmd+V macOS должна разрешить приложению управление компьютером в System Settings -> Privacy & Security -> Accessibility. Для записи WAV нужен доступ к микрофону в Privacy & Security -> Microphone. Пути Python и ASR runner задаются в Debug.xcconfig.")
                     .font(.footnote)
@@ -101,25 +96,19 @@ struct SettingsView: View {
         .frame(minHeight: 560)
     }
 
-    private var permissionButtons: some View {
-        HStack {
-            accessibilityButton
-            microphoneButton
-            refreshButton
-        }
-    }
-
-    private var accessibilityButton: some View {
-        Button("Запросить Accessibility") {
+    private var accessibilityPermissionButton: some View {
+        Button("Запросить разрешение") {
             AccessibilityPermission.request()
             dictationController.refreshPermissionsAndHotkey()
         }
+        .controlSize(.small)
     }
 
-    private var microphoneButton: some View {
-        Button("Запросить микрофон") {
+    private var microphonePermissionButton: some View {
+        Button("Запросить разрешение") {
             dictationController.requestMicrophoneAccessIfNeeded()
         }
+        .controlSize(.small)
     }
 
     private var refreshButton: some View {
