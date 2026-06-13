@@ -106,6 +106,10 @@ final class DictationController: ObservableObject {
         recordingService.recordingsDirectory?.path ?? "Application Support/RuFlow/Recordings"
     }
 
+    var recordingsDirectoryURL: URL? {
+        recordingService.recordingsDirectory
+    }
+
     var asrPythonPath: String {
         asrConfiguration.pythonPathForDisplay
     }
@@ -234,11 +238,7 @@ final class DictationController: ObservableObject {
         asrTask = nil
         recordingService.cancelRecording()
 
-        if let completedRecordingURL {
-            try? FileManager.default.removeItem(at: completedRecordingURL)
-        }
-
-        completedRecordingURL = nil
+        removeCompletedRecording(completedRecordingURL)
         state = .idle
         overlayController.hide()
         hotkeyManager.markSessionInactive()
@@ -251,8 +251,7 @@ final class DictationController: ObservableObject {
 
         stopRecordingTimer()
         asrTask = nil
-        try? FileManager.default.removeItem(at: audioURL)
-        completedRecordingURL = nil
+        removeCompletedRecording(audioURL)
         state = .idle
         overlayController.hide()
         hotkeyManager.markSessionInactive()
@@ -287,11 +286,22 @@ final class DictationController: ObservableObject {
     }
 
     private func handleASRFailure(_ error: Error, audioURL: URL) {
-        pasteService.copyTextToClipboard(audioURL.path)
         asrTask = nil
-        completedRecordingURL = nil
+        removeCompletedRecording(audioURL)
         presentError(error.localizedDescription)
         hotkeyManager.markSessionInactive()
+    }
+
+    private func removeCompletedRecording(_ audioURL: URL?) {
+        guard let audioURL else {
+            return
+        }
+
+        recordingService.removeRecording(at: audioURL)
+
+        if completedRecordingURL == audioURL {
+            completedRecordingURL = nil
+        }
     }
 
     private func startRecordingTimer() {

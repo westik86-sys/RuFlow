@@ -3,12 +3,6 @@ import ApplicationServices
 
 @MainActor
 final class PasteService {
-    func copyTextToClipboard(_ text: String) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-    }
-
     func insertText(_ text: String, completion: @escaping () -> Void) {
         let pasteboard = NSPasteboard.general
         let snapshot = ClipboardSnapshot.capture(from: pasteboard)

@@ -313,6 +313,29 @@ final class ASRSidecarServiceTests: XCTestCase {
     }
 }
 
+final class AudioRecordingServiceTests: XCTestCase {
+    func testRemoveRecordingDeletesTemporaryAudioFile() throws {
+        let audioURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("wav")
+        try Data("audio".utf8).write(to: audioURL)
+
+        AudioRecordingService().removeRecording(at: audioURL)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: audioURL.path))
+    }
+
+    func testRemoveRecordingIgnoresMissingFile() throws {
+        let audioURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("wav")
+
+        AudioRecordingService().removeRecording(at: audioURL)
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: audioURL.path))
+    }
+}
+
 private enum TestTimeoutError: Error {
     case timedOut
 }

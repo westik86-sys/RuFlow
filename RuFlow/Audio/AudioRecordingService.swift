@@ -138,8 +138,12 @@ final class AudioRecordingService: NSObject {
         currentFileURL = nil
 
         if let outputURL {
-            try? fileManager.removeItem(at: outputURL)
+            removeRecording(at: outputURL)
         }
+    }
+
+    func removeRecording(at outputURL: URL) {
+        try? fileManager.removeItem(at: outputURL)
     }
 
     private func makeRecorder(outputURL: URL) throws -> AVAudioRecorder {

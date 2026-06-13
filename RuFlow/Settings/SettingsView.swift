@@ -45,13 +45,6 @@ struct SettingsView: View {
                         }
                     }
 
-                    GridRow {
-                        Text("Записи")
-                            .foregroundStyle(.secondary)
-                        Text(dictationController.recordingsDirectoryPath)
-                            .lineLimit(2)
-                            .textSelection(.enabled)
-                    }
                 }
 
                 HStack {
@@ -114,6 +107,20 @@ struct SettingsView: View {
 
     private var advancedSettingsGrid: some View {
         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
+            GridRow {
+                Text("Временные аудиофайлы")
+                    .foregroundStyle(.secondary)
+                Button {
+                    openTemporaryAudioFilesDirectory()
+                } label: {
+                    Text(dictationController.recordingsDirectoryPath)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+                .buttonStyle(.link)
+                .help("Открыть папку временных аудиофайлов")
+            }
+
             GridRow {
                 Text("Python")
                     .foregroundStyle(.secondary)
@@ -192,5 +199,22 @@ struct SettingsView: View {
     private func stopPermissionPolling() {
         permissionPollingTask?.cancel()
         permissionPollingTask = nil
+    }
+
+    private func openTemporaryAudioFilesDirectory() {
+        guard let directoryURL = dictationController.recordingsDirectoryURL else {
+            return
+        }
+
+        do {
+            try FileManager.default.createDirectory(
+                at: directoryURL,
+                withIntermediateDirectories: true
+            )
+        } catch {
+            return
+        }
+
+        NSWorkspace.shared.open(directoryURL)
     }
 }

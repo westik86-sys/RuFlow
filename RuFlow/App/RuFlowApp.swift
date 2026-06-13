@@ -51,13 +51,17 @@ private struct MenuBarContentView: View {
             openSettings()
         }
 
-        Button("Запросить Accessibility") {
-            AccessibilityPermission.request()
-            dictationController.refreshPermissionsAndHotkey()
+        if !dictationController.isAccessibilityTrusted {
+            Button("Запросить Accessibility") {
+                AccessibilityPermission.request()
+                dictationController.refreshPermissionsAndHotkey()
+            }
         }
 
-        Button("Запросить микрофон") {
-            dictationController.requestMicrophoneAccessIfNeeded()
+        if dictationController.canRequestMicrophonePermission {
+            Button("Запросить микрофон") {
+                dictationController.requestMicrophoneAccessIfNeeded()
+            }
         }
 
         Divider()
