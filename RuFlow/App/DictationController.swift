@@ -219,9 +219,14 @@ final class DictationController: ObservableObject {
         hotkeyManager.markSessionInactive()
     }
 
-    private func completeRecording() {
+    private func completeRecording(audioURL: URL) {
+        guard state == .saving, completedRecordingURL == audioURL else {
+            return
+        }
+
         stopRecordingTimer()
         asrTask = nil
+        try? FileManager.default.removeItem(at: audioURL)
         completedRecordingURL = nil
         state = .idle
         overlayController.hide()
@@ -245,7 +250,7 @@ final class DictationController: ObservableObject {
             }
 
             pasteService.insertText(text) { [weak self] in
-                self?.completeRecording()
+                self?.completeRecording(audioURL: audioURL)
             }
         } catch {
             guard !Task.isCancelled else {
