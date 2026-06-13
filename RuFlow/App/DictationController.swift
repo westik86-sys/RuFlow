@@ -126,6 +126,14 @@ final class DictationController: ObservableObject {
         microphoneAuthorizationStatus == .authorized
     }
 
+    var canRequestMicrophonePermission: Bool {
+        microphoneAuthorizationStatus == .notDetermined
+    }
+
+    var isMicrophonePermissionDenied: Bool {
+        microphoneAuthorizationStatus == .denied
+    }
+
     var needsPermissionPolling: Bool {
         !isAccessibilityTrusted || !isMicrophoneAuthorized
     }

@@ -38,10 +38,10 @@ struct SettingsView: View {
                     GridRow {
                         Text("Микрофон")
                             .foregroundStyle(.secondary)
-                        if dictationController.isMicrophoneAuthorized {
-                            Text(dictationController.microphoneStatusText)
-                        } else {
+                        if dictationController.canRequestMicrophonePermission {
                             microphonePermissionButton
+                        } else {
+                            Text(dictationController.microphoneStatusText)
                         }
                     }
 
@@ -70,6 +70,13 @@ struct SettingsView: View {
 
                 if !dictationController.isAccessibilityTrusted {
                     Text("Если RuFlow включен в Accessibility, но здесь всё равно написано \"Требуется\", удалите RuFlow из списка Accessibility через кнопку минус, затем добавьте именно приложение из строки \"Запущено из\" в разделе \"Дополнительно\" и полностью перезапустите RuFlow.")
+                        .font(.footnote)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if dictationController.isMicrophonePermissionDenied {
+                    Text("Доступ к микрофону запрещен. Включите RuFlow в System Settings -> Privacy & Security -> Microphone, затем вернитесь сюда.")
                         .font(.footnote)
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
