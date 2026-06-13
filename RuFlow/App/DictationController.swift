@@ -122,6 +122,14 @@ final class DictationController: ObservableObject {
         isAccessibilityTrusted ? "Разрешено" : "Требуется для этой копии приложения"
     }
 
+    var isMicrophoneAuthorized: Bool {
+        microphoneAuthorizationStatus == .authorized
+    }
+
+    var needsPermissionPolling: Bool {
+        !isAccessibilityTrusted || !isMicrophoneAuthorized
+    }
+
     var isRecordingOrSaving: Bool {
         state == .recording || state == .saving
     }
@@ -131,10 +139,19 @@ final class DictationController: ObservableObject {
         isHotkeyReady = hotkeyManager.restart()
     }
 
+    func refreshPermissionStatus() {
+        let wasAccessibilityTrusted = isAccessibilityTrusted
+        refreshPermissionState()
+
+        if wasAccessibilityTrusted != isAccessibilityTrusted {
+            isHotkeyReady = hotkeyManager.restart()
+        }
+    }
+
     func requestMicrophoneAccessIfNeeded() {
         Task { @MainActor [weak self] in
             _ = await MicrophonePermission.requestIfNeeded()
-            self?.refreshPermissionsAndHotkey()
+            self?.refreshPermissionStatus()
         }
     }
 

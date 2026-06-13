@@ -1,8 +1,9 @@
-import AVFoundation
+import AppKit
 import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var dictationController: DictationController
+    @State private var permissionPollingTask: Task<Void, Never>?
 
     var body: some View {
         ScrollView {
@@ -36,7 +37,7 @@ struct SettingsView: View {
                     GridRow {
                         Text("Микрофон")
                             .foregroundStyle(.secondary)
-                        if dictationController.microphoneAuthorizationStatus == .authorized {
+                        if dictationController.isMicrophoneAuthorized {
                             Text(dictationController.microphoneStatusText)
                         } else {
                             microphonePermissionButton
@@ -94,6 +95,15 @@ struct SettingsView: View {
         }
         .frame(width: 680)
         .frame(minHeight: 560)
+        .onAppear {
+            refreshPermissionsAndUpdatePolling()
+        }
+        .onDisappear {
+            stopPermissionPolling()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refreshPermissionsAndUpdatePolling()
+        }
     }
 
     private var accessibilityPermissionButton: some View {
@@ -114,6 +124,48 @@ struct SettingsView: View {
     private var refreshButton: some View {
         Button("Проверить снова") {
             dictationController.refreshPermissionsAndHotkey()
+            updatePermissionPolling()
         }
+    }
+
+    private func refreshPermissionsAndUpdatePolling() {
+        dictationController.refreshPermissionStatus()
+        updatePermissionPolling()
+    }
+
+    private func updatePermissionPolling() {
+        if dictationController.needsPermissionPolling {
+            startPermissionPolling()
+        } else {
+            stopPermissionPolling()
+        }
+    }
+
+    private func startPermissionPolling() {
+        guard permissionPollingTask == nil else {
+            return
+        }
+
+        permissionPollingTask = Task { @MainActor in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+
+                dictationController.refreshPermissionStatus()
+
+                if !dictationController.needsPermissionPolling {
+                    permissionPollingTask = nil
+                    return
+                }
+            }
+        }
+    }
+
+    private func stopPermissionPolling() {
+        permissionPollingTask?.cancel()
+        permissionPollingTask = nil
     }
 }
