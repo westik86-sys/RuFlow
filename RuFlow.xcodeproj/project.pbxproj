@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		2DDE26D02FDDCDE4002B3669 /* RuFlowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DDE26CF2FDDCDE4002B3669 /* RuFlowTests.swift */; };
 		8A7F1D022C6A040100000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8A7F1D012C6A040100000001 /* Assets.xcassets */; };
 		8A7F1C092C6A030100000001 /* ASRDebugConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1C032C6A030100000001 /* ASRDebugConfiguration.swift */; };
 		8A7F1C0A2C6A030100000001 /* ASRSidecarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1C042C6A030100000001 /* ASRSidecarService.swift */; };
@@ -24,7 +25,19 @@
 		8A7F1B112C6A020100000001 /* MicrophonePermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7F1B0F2C6A020100000001 /* MicrophonePermission.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		2DDE26CA2FDDCDE4002B3669 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8A7F1A562C6A010100000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8A7F1A5D2C6A010100000001;
+			remoteInfo = RuFlow;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		2DDE26C62FDDCDE4002B3669 /* RuFlowTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RuFlowTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2DDE26CF2FDDCDE4002B3669 /* RuFlowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuFlowTests.swift; sourceTree = "<group>"; };
 		8A7F1D012C6A040100000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		8A7F1C012C6A030100000001 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		8A7F1C0B2C6A030100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -47,6 +60,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		2DDE26C32FDDCDE4002B3669 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8A7F1A5B2C6A010100000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -63,6 +83,7 @@
 				8A7F1C062C6A030100000001 /* Config */,
 				8A7F1C072C6A030100000001 /* asr */,
 				8A7F1A662C6A010100000001 /* RuFlow */,
+				2DDE26C72FDDCDE4002B3669 /* RuFlowTests */,
 				8A7F1A5F2C6A010100000001 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -71,8 +92,17 @@
 			isa = PBXGroup;
 			children = (
 				8A7F1A5E2C6A010100000001 /* RuFlow.app */,
+				2DDE26C62FDDCDE4002B3669 /* RuFlowTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		2DDE26C72FDDCDE4002B3669 /* RuFlowTests */ = {
+			isa = PBXGroup;
+			children = (
+				2DDE26CF2FDDCDE4002B3669 /* RuFlowTests.swift */,
+			);
+			path = RuFlowTests;
 			sourceTree = "<group>";
 		};
 		8A7F1A662C6A010100000001 /* RuFlow */ = {
@@ -173,6 +203,26 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2DDE26C52FDDCDE4002B3669 /* RuFlowTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2DDE26CE2FDDCDE4002B3669 /* Build configuration list for PBXNativeTarget "RuFlowTests" */;
+			buildPhases = (
+				2DDE26C22FDDCDE4002B3669 /* Sources */,
+				2DDE26C32FDDCDE4002B3669 /* Frameworks */,
+				2DDE26C42FDDCDE4002B3669 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2DDE26CB2FDDCDE4002B3669 /* PBXTargetDependency */,
+			);
+			name = RuFlowTests;
+			packageProductDependencies = (
+			);
+			productName = RuFlowTests;
+			productReference = 2DDE26C62FDDCDE4002B3669 /* RuFlowTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		8A7F1A5D2C6A010100000001 /* RuFlow */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 8A7F1A652C6A010100000001 /* Build configuration list for PBXNativeTarget "RuFlow" */;
@@ -200,6 +250,10 @@
 				LastSwiftUpdateCheck = 2620;
 				LastUpgradeCheck = 2620;
 				TargetAttributes = {
+					2DDE26C52FDDCDE4002B3669 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 8A7F1A5D2C6A010100000001;
+					};
 					8A7F1A5D2C6A010100000001 = {
 						CreatedOnToolsVersion = 26.2;
 					};
@@ -219,11 +273,19 @@
 			projectRoot = "";
 			targets = (
 				8A7F1A5D2C6A010100000001 /* RuFlow */,
+				2DDE26C52FDDCDE4002B3669 /* RuFlowTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		2DDE26C42FDDCDE4002B3669 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8A7F1A5C2C6A010100000001 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -235,6 +297,14 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		2DDE26C22FDDCDE4002B3669 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2DDE26D02FDDCDE4002B3669 /* RuFlowTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8A7F1A5A2C6A010100000001 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -258,7 +328,57 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		2DDE26CB2FDDCDE4002B3669 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8A7F1A5D2C6A010100000001 /* RuFlow */;
+			targetProxy = 2DDE26CA2FDDCDE4002B3669 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		2DDE26CC2FDDCDE4002B3669 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Iam.RuFlowTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RuFlow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RuFlow";
+			};
+			name = Debug;
+		};
+		2DDE26CD2FDDCDE4002B3669 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = Iam.RuFlowTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RuFlow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RuFlow";
+			};
+			name = Release;
+		};
 		8A7F1A632C6A010100000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -435,6 +555,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		2DDE26CE2FDDCDE4002B3669 /* Build configuration list for PBXNativeTarget "RuFlowTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2DDE26CC2FDDCDE4002B3669 /* Debug */,
+				2DDE26CD2FDDCDE4002B3669 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		8A7F1A592C6A010100000001 /* Build configuration list for PBXProject "RuFlow" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
