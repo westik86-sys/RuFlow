@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var dictationController: DictationController
     @State private var permissionPollingTask: Task<Void, Never>?
+    @State private var showsAdvancedSettings = false
 
     var body: some View {
         ScrollView {
@@ -51,41 +52,24 @@ struct SettingsView: View {
                             .lineLimit(2)
                             .textSelection(.enabled)
                     }
-
-                    GridRow {
-                        Text("Python")
-                            .foregroundStyle(.secondary)
-                        Text(dictationController.asrPythonPath)
-                            .lineLimit(2)
-                            .textSelection(.enabled)
-                    }
-
-                    GridRow {
-                        Text("ASR runner")
-                            .foregroundStyle(.secondary)
-                        Text(dictationController.asrRunnerPath)
-                            .lineLimit(3)
-                            .textSelection(.enabled)
-                    }
-
-                    GridRow {
-                        Text("Запущено из")
-                            .foregroundStyle(.secondary)
-                        Text(dictationController.runningAppPath)
-                            .lineLimit(3)
-                            .textSelection(.enabled)
-                    }
                 }
 
-                refreshButton
+                HStack {
+                    refreshButton
+                    advancedSettingsButton
+                }
 
-                Text("Для глобального hotkey и synthetic Cmd+V macOS должна разрешить приложению управление компьютером в System Settings -> Privacy & Security -> Accessibility. Для записи WAV нужен доступ к микрофону в Privacy & Security -> Microphone. Пути Python и ASR runner задаются в Debug.xcconfig.")
+                if showsAdvancedSettings {
+                    advancedSettingsGrid
+                }
+
+                Text("Для глобального hotkey и synthetic Cmd+V macOS должна разрешить приложению управление компьютером в System Settings -> Privacy & Security -> Accessibility. Для записи WAV нужен доступ к микрофону в Privacy & Security -> Microphone.")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if !dictationController.isAccessibilityTrusted {
-                    Text("Если RuFlow включен в Accessibility, но здесь всё равно написано \"Требуется\", удалите RuFlow из списка Accessibility через кнопку минус, затем добавьте именно приложение из строки \"Запущено из\" и полностью перезапустите RuFlow.")
+                    Text("Если RuFlow включен в Accessibility, но здесь всё равно написано \"Требуется\", удалите RuFlow из списка Accessibility через кнопку минус, затем добавьте именно приложение из строки \"Запущено из\" в разделе \"Дополнительно\" и полностью перезапустите RuFlow.")
                         .font(.footnote)
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
@@ -121,10 +105,44 @@ struct SettingsView: View {
         .controlSize(.small)
     }
 
+    private var advancedSettingsGrid: some View {
+        Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
+            GridRow {
+                Text("Python")
+                    .foregroundStyle(.secondary)
+                Text(dictationController.asrPythonPath)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+            }
+
+            GridRow {
+                Text("ASR runner")
+                    .foregroundStyle(.secondary)
+                Text(dictationController.asrRunnerPath)
+                    .lineLimit(3)
+                    .textSelection(.enabled)
+            }
+
+            GridRow {
+                Text("Запущено из")
+                    .foregroundStyle(.secondary)
+                Text(dictationController.runningAppPath)
+                    .lineLimit(3)
+                    .textSelection(.enabled)
+            }
+        }
+    }
+
     private var refreshButton: some View {
         Button("Проверить снова") {
             dictationController.refreshPermissionsAndHotkey()
             updatePermissionPolling()
+        }
+    }
+
+    private var advancedSettingsButton: some View {
+        Button(showsAdvancedSettings ? "Скрыть" : "Дополнительно") {
+            showsAdvancedSettings.toggle()
         }
     }
 
