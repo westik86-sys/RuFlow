@@ -2,3 +2,11 @@
 build/
 dist/
 asr/.venv/
+
+# Xcode user state
+*.xcuserstate
+xcuserdata/
+
+# Python cache
+__pycache__/
+*.pyc
