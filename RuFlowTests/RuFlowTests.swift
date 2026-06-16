@@ -126,6 +126,40 @@ final class DictationTextFormatterTests: XCTestCase {
     }
 }
 
+final class LoginLaunchAgentServiceTests: XCTestCase {
+    func testLaunchAgentOpensRuFlowByBundleIdentifier() {
+        let plist = LoginLaunchAgentService.propertyList()
+
+        XCTAssertEqual(plist["Label"] as? String, "com.ruflow.RuFlow.login")
+        XCTAssertEqual(plist["RunAtLoad"] as? Bool, true)
+        XCTAssertEqual(plist["LimitLoadToSessionType"] as? String, "Aqua")
+        XCTAssertEqual(
+            plist["ProgramArguments"] as? [String],
+            ["/usr/bin/open", "-b", "com.ruflow.RuFlow"]
+        )
+    }
+
+    func testLaunchAgentPlistDataIsValidXMLPropertyList() throws {
+        let data = try LoginLaunchAgentService.plistData()
+        let plist = try PropertyListSerialization.propertyList(
+            from: data,
+            options: [],
+            format: nil
+        )
+
+        guard let dictionary = plist as? [String: Any] else {
+            XCTFail("Expected dictionary plist")
+            return
+        }
+
+        XCTAssertEqual(dictionary["Label"] as? String, "com.ruflow.RuFlow.login")
+        XCTAssertEqual(
+            dictionary["ProgramArguments"] as? [String],
+            ["/usr/bin/open", "-b", "com.ruflow.RuFlow"]
+        )
+    }
+}
+
 final class ASRSidecarServiceTests: XCTestCase {
     func testTranscribeUsesProcessRunnerAndParsesOutput() async throws {
         let audioURL = try makeTemporaryFile(extension: "wav")

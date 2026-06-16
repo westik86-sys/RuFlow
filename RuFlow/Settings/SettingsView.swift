@@ -5,6 +5,8 @@ struct SettingsView: View {
     @EnvironmentObject private var dictationController: DictationController
     @State private var permissionPollingTask: Task<Void, Never>?
     @State private var showsAdvancedSettings = false
+    @State private var startsAtLogin = LoginLaunchAgentService.isEnabled
+    @State private var startAtLoginErrorMessage: String?
 
     var body: some View {
         ScrollView {
@@ -91,6 +93,7 @@ struct SettingsView: View {
         .frame(width: 680)
         .frame(minHeight: 560)
         .onAppear {
+            refreshStartAtLoginState()
             refreshPermissionsAndUpdatePolling()
         }
         .onDisappear {
@@ -134,6 +137,22 @@ struct SettingsView: View {
 
     private var advancedSettingsGrid: some View {
         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
+            GridRow {
+                Text("Автозапуск")
+                    .foregroundStyle(.secondary)
+                Toggle("Запускать RuFlow при входе в систему", isOn: startsAtLoginBinding)
+                    .toggleStyle(.checkbox)
+            }
+
+            if let startAtLoginErrorMessage {
+                GridRow {
+                    Text("")
+                    Text(startAtLoginErrorMessage)
+                        .foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
             GridRow {
                 Text("Временные аудиофайлы")
                     .foregroundStyle(.secondary)
@@ -184,8 +203,20 @@ struct SettingsView: View {
 
     private var advancedSettingsButton: some View {
         Button(showsAdvancedSettings ? "Скрыть" : "Дополнительно") {
+            refreshStartAtLoginState()
             showsAdvancedSettings.toggle()
         }
+    }
+
+    private var startsAtLoginBinding: Binding<Bool> {
+        Binding(
+            get: {
+                startsAtLogin
+            },
+            set: { isEnabled in
+                updateStartsAtLogin(isEnabled)
+            }
+        )
     }
 
     private func refreshPermissionsAndUpdatePolling() {
@@ -229,6 +260,21 @@ struct SettingsView: View {
         permissionPollingTask = nil
     }
 
+    private func refreshStartAtLoginState() {
+        startsAtLogin = LoginLaunchAgentService.isEnabled
+    }
+
+    private func updateStartsAtLogin(_ isEnabled: Bool) {
+        do {
+            try LoginLaunchAgentService.setEnabled(isEnabled)
+            startAtLoginErrorMessage = nil
+        } catch {
+            startAtLoginErrorMessage = error.localizedDescription
+        }
+
+        refreshStartAtLoginState()
+    }
+
     private func openTemporaryAudioFilesDirectory() {
         guard let directoryURL = dictationController.recordingsDirectoryURL else {
             return
@@ -244,6 +290,75 @@ struct SettingsView: View {
         }
 
         NSWorkspace.shared.open(directoryURL)
+    }
+}
+
+enum LoginLaunchAgentService {
+    static let label = "com.ruflow.RuFlow.login"
+    static let appBundleIdentifier = "com.ruflow.RuFlow"
+
+    static var isEnabled: Bool {
+        FileManager.default.fileExists(atPath: launchAgentURL.path)
+    }
+
+    static var launchAgentURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("LaunchAgents", isDirectory: true)
+            .appendingPathComponent("\(label).plist", isDirectory: false)
+    }
+
+    static func setEnabled(_ isEnabled: Bool) throws {
+        if isEnabled {
+            try install()
+        } else {
+            try uninstall()
+        }
+    }
+
+    static func propertyList(bundleIdentifier: String = appBundleIdentifier) -> [String: Any] {
+        [
+            "Label": label,
+            "ProgramArguments": [
+                "/usr/bin/open",
+                "-b",
+                bundleIdentifier
+            ],
+            "RunAtLoad": true,
+            "LimitLoadToSessionType": "Aqua"
+        ]
+    }
+
+    static func plistData(bundleIdentifier: String = appBundleIdentifier) throws -> Data {
+        try PropertyListSerialization.data(
+            fromPropertyList: propertyList(bundleIdentifier: bundleIdentifier),
+            format: .xml,
+            options: 0
+        )
+    }
+
+    private static func install() throws {
+        let fileManager = FileManager.default
+        let directoryURL = launchAgentURL.deletingLastPathComponent()
+
+        try fileManager.createDirectory(
+            at: directoryURL,
+            withIntermediateDirectories: true
+        )
+
+        try plistData().write(to: launchAgentURL, options: .atomic)
+        try fileManager.setAttributes(
+            [.posixPermissions: 0o644],
+            ofItemAtPath: launchAgentURL.path
+        )
+    }
+
+    private static func uninstall() throws {
+        guard isEnabled else {
+            return
+        }
+
+        try FileManager.default.removeItem(at: launchAgentURL)
     }
 }
 
