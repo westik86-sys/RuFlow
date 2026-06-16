@@ -10,20 +10,21 @@ final class DictationController: ObservableObject {
     }
 
     @Published private(set) var state: State = .idle
-    @Published private(set) var isAccessibilityTrusted = AccessibilityPermission.isTrusted
-    @Published private(set) var microphoneAuthorizationStatus = MicrophonePermission.authorizationStatus
-    @Published private(set) var hasAvailableMicrophone = MicrophonePermission.hasAvailableInput
+    @Published private(set) var isAccessibilityTrusted: Bool
+    @Published private(set) var microphoneAuthorizationStatus: AVAuthorizationStatus
+    @Published private(set) var hasAvailableMicrophone: Bool
     @Published private(set) var isHotkeyReady = false
     @Published private(set) var recordingDurationText = "00:00"
     @Published private(set) var lastErrorMessage: String?
 
     private let maximumRecordingDuration: TimeInterval = 25
-    private let hotkeyManager = HotkeyManager()
-    private let overlayController = FloatingPillWindowController()
-    private let pasteService = PasteService()
-    private let recordingService = AudioRecordingService()
-    private let asrService = ASRSidecarService()
-    private let asrConfiguration = ASRDebugConfiguration.current
+    private let hotkeyManager: HotkeyManaging
+    private let overlayController: DictationOverlayPresenting
+    private let pasteService: PasteService
+    private let recordingService: AudioRecordingServicing
+    private let asrService: ASRSidecarService
+    private let asrConfiguration: ASRDebugConfiguration
+    private let microphonePermission: MicrophonePermissionProviding
     private var recordingTimerTask: Task<Void, Never>?
     private var errorPresentationTask: Task<Void, Never>?
     private var asrTask: Task<Void, Never>?
@@ -31,7 +32,27 @@ final class DictationController: ObservableObject {
     private var completedRecordingURL: URL?
     private var lastDisplayedRemainingSeconds: Int?
 
-    init() {
+    init(
+        hotkeyManager: HotkeyManaging = HotkeyManager(),
+        overlayController: DictationOverlayPresenting = FloatingPillWindowController(),
+        pasteService: PasteService = PasteService(),
+        recordingService: AudioRecordingServicing = AudioRecordingService(),
+        asrService: ASRSidecarService = ASRSidecarService(),
+        asrConfiguration: ASRDebugConfiguration = .current,
+        microphonePermission: MicrophonePermissionProviding = SystemMicrophonePermissionProvider(),
+        requestMicrophoneAccessOnInit: Bool = true
+    ) {
+        self.hotkeyManager = hotkeyManager
+        self.overlayController = overlayController
+        self.pasteService = pasteService
+        self.recordingService = recordingService
+        self.asrService = asrService
+        self.asrConfiguration = asrConfiguration
+        self.microphonePermission = microphonePermission
+        isAccessibilityTrusted = AccessibilityPermission.isTrusted
+        microphoneAuthorizationStatus = microphonePermission.authorizationStatus
+        hasAvailableMicrophone = microphonePermission.hasAvailableInput
+
         hotkeyManager.onPress = { [weak self] in
             Task { @MainActor in
                 self?.beginRecording()
@@ -51,7 +72,9 @@ final class DictationController: ObservableObject {
         }
 
         refreshPermissionsAndHotkey()
-        requestMicrophoneAccessIfNeeded()
+        if requestMicrophoneAccessOnInit {
+            requestMicrophoneAccessIfNeeded()
+        }
     }
 
     var menuBarSystemImage: String {
@@ -162,8 +185,12 @@ final class DictationController: ObservableObject {
 
     func requestMicrophoneAccessIfNeeded() {
         Task { @MainActor [weak self] in
-            _ = await MicrophonePermission.requestIfNeeded()
-            self?.refreshPermissionStatus()
+            guard let self else {
+                return
+            }
+
+            _ = await microphonePermission.requestIfNeeded()
+            refreshPermissionStatus()
         }
     }
 
@@ -199,13 +226,13 @@ final class DictationController: ObservableObject {
         }
 
         do {
+            try showRecordingOverlay()
             try recordingService.startRecording()
+            try verifyRecordingOverlayIsVisible()
             state = .recording
             startRecordingTimer()
         } catch {
-            presentError(error.localizedDescription)
-            recordingService.cancelRecording()
-            hotkeyManager.markSessionInactive()
+            failStart(error)
         }
     }
 
@@ -344,9 +371,28 @@ final class DictationController: ObservableObject {
             lastDisplayedRemainingSeconds = remainingSeconds
         }
 
-        overlayController.showRecording(
-            message: compactFormattedDuration(remainingSeconds),
-            level: recordingService.normalizedMeterLevel(),
+        do {
+            try showRecordingOverlay(
+                message: compactFormattedDuration(remainingSeconds),
+                level: recordingService.normalizedMeterLevel()
+            )
+        } catch {
+            failActiveRecording(error)
+            return
+        }
+
+        if elapsed >= maximumRecordingDuration {
+            finishRecording()
+        }
+    }
+
+    private func showRecordingOverlay(
+        message: String? = nil,
+        level: Double = 0
+    ) throws {
+        let didShow = try overlayController.showRecording(
+            message: message ?? compactFormattedDuration(Int(maximumRecordingDuration)),
+            level: level,
             onStop: { [weak self] in
                 self?.stopRecordingFromUserAction()
             },
@@ -355,9 +401,42 @@ final class DictationController: ObservableObject {
             }
         )
 
-        if elapsed >= maximumRecordingDuration {
-            finishRecording()
+        guard didShow else {
+            throw FloatingPillPresentationError.notVisible
         }
+
+        try verifyRecordingOverlayIsVisible()
+    }
+
+    private func verifyRecordingOverlayIsVisible() throws {
+        guard overlayController.isVisibleOnScreen else {
+            throw FloatingPillPresentationError.notVisible
+        }
+    }
+
+    private func failStart(_ error: Error) {
+        NSLog("RuFlow dictation start failed: \(error.localizedDescription)")
+        stopRecordingTimer()
+        asrTask?.cancel()
+        asrTask = nil
+        completedRecordingURL = nil
+        recordingService.cancelRecording()
+        overlayController.hide()
+        presentError(error.localizedDescription)
+        hotkeyManager.markSessionInactive()
+    }
+
+    private func failActiveRecording(_ error: Error) {
+        NSLog("RuFlow dictation cancelled because overlay is not visible: \(error.localizedDescription)")
+        stopRecordingTimer()
+        asrTask?.cancel()
+        asrTask = nil
+        recordingService.cancelRecording()
+        removeCompletedRecording(completedRecordingURL)
+        state = .idle
+        overlayController.hide()
+        presentError(error.localizedDescription)
+        hotkeyManager.markSessionInactive()
     }
 
     private func formattedDuration(_ totalSeconds: Int) -> String {
@@ -374,8 +453,8 @@ final class DictationController: ObservableObject {
 
     private func refreshPermissionState() {
         isAccessibilityTrusted = AccessibilityPermission.isTrusted
-        microphoneAuthorizationStatus = MicrophonePermission.authorizationStatus
-        hasAvailableMicrophone = MicrophonePermission.hasAvailableInput
+        microphoneAuthorizationStatus = microphonePermission.authorizationStatus
+        hasAvailableMicrophone = microphonePermission.hasAvailableInput
     }
 
     private func presentError(_ message: String) {

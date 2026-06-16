@@ -1,3 +1,4 @@
+import AVFoundation
 import Darwin
 import XCTest
 @testable import RuFlow
@@ -336,8 +337,249 @@ final class AudioRecordingServiceTests: XCTestCase {
     }
 }
 
+@MainActor
+final class DictationControllerOverlayFailSafeTests: XCTestCase {
+    func testStartsRecordingOnlyAfterOverlayIsVisible() async {
+        let environment = makeController()
+
+        environment.hotkey.press()
+        await Task.yield()
+
+        XCTAssertEqual(environment.controller.state, .recording)
+        XCTAssertTrue(environment.recorder.isRecording)
+
+        let showIndex = environment.events.values.firstIndex(of: "overlay.showRecording")
+        let startIndex = environment.events.values.firstIndex(of: "recorder.startRecording")
+        XCTAssertNotNil(showIndex)
+        XCTAssertNotNil(startIndex)
+
+        if let showIndex, let startIndex {
+            XCTAssertLessThan(showIndex, startIndex)
+        }
+
+        environment.controller.cancelRecordingFromMenu()
+    }
+
+    func testDoesNotStartRecordingWhenOverlayThrows() async {
+        let environment = makeController()
+        environment.overlay.showRecordingError = TestDictationError.overlayFailed
+
+        environment.hotkey.press()
+        await Task.yield()
+
+        XCTAssertEqual(environment.controller.state, .idle)
+        XCTAssertEqual(environment.recorder.startRecordingCallCount, 0)
+        XCTAssertFalse(environment.recorder.isRecording)
+        XCTAssertGreaterThanOrEqual(environment.recorder.cancelRecordingCallCount, 1)
+        XCTAssertEqual(environment.hotkey.markSessionInactiveCallCount, 1)
+        XCTAssertEqual(environment.overlay.hideCallCount, 1)
+        XCTAssertEqual(environment.overlay.showErrorCallCount, 1)
+        XCTAssertEqual(environment.controller.lastErrorMessage, TestDictationError.overlayFailed.localizedDescription)
+    }
+
+    func testDoesNotStartRecordingWhenOverlayIsNotVisible() async {
+        let environment = makeController()
+        environment.overlay.showRecordingResult = false
+        environment.overlay.isVisibleOnScreen = false
+
+        environment.hotkey.press()
+        await Task.yield()
+
+        XCTAssertEqual(environment.controller.state, .idle)
+        XCTAssertEqual(environment.recorder.startRecordingCallCount, 0)
+        XCTAssertFalse(environment.recorder.isRecording)
+        XCTAssertGreaterThanOrEqual(environment.recorder.cancelRecordingCallCount, 1)
+        XCTAssertEqual(environment.hotkey.markSessionInactiveCallCount, 1)
+        XCTAssertEqual(environment.overlay.showErrorCallCount, 1)
+        XCTAssertEqual(environment.controller.lastErrorMessage, FloatingPillPresentationError.notVisible.localizedDescription)
+    }
+
+    func testCancelsRecordingWhenOverlayDisappearsDuringRecording() async throws {
+        let environment = makeController()
+        environment.hotkey.press()
+        await Task.yield()
+        XCTAssertEqual(environment.controller.state, .recording)
+        XCTAssertTrue(environment.recorder.isRecording)
+
+        environment.overlay.isVisibleOnScreen = false
+        try await Task.sleep(nanoseconds: 150_000_000)
+
+        XCTAssertEqual(environment.controller.state, .idle)
+        XCTAssertFalse(environment.recorder.isRecording)
+        XCTAssertGreaterThanOrEqual(environment.recorder.cancelRecordingCallCount, 1)
+        XCTAssertEqual(environment.hotkey.markSessionInactiveCallCount, 1)
+        XCTAssertEqual(environment.overlay.showErrorCallCount, 1)
+    }
+
+    private func makeController() -> (
+        controller: DictationController,
+        hotkey: FakeHotkeyManager,
+        overlay: FakeDictationOverlayPresenter,
+        recorder: FakeAudioRecordingService,
+        events: TestEventLog
+    ) {
+        let events = TestEventLog()
+        let hotkey = FakeHotkeyManager()
+        let overlay = FakeDictationOverlayPresenter(events: events)
+        let recorder = FakeAudioRecordingService(events: events)
+        let microphonePermission = FakeMicrophonePermissionProvider(
+            authorizationStatus: .authorized,
+            hasAvailableInput: true
+        )
+        let controller = DictationController(
+            hotkeyManager: hotkey,
+            overlayController: overlay,
+            recordingService: recorder,
+            microphonePermission: microphonePermission,
+            requestMicrophoneAccessOnInit: false
+        )
+
+        return (controller, hotkey, overlay, recorder, events)
+    }
+}
+
 private enum TestTimeoutError: Error {
     case timedOut
+}
+
+private enum TestDictationError: LocalizedError {
+    case overlayFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .overlayFailed:
+            return "overlay failed"
+        }
+    }
+}
+
+private final class TestEventLog {
+    private(set) var values: [String] = []
+
+    func append(_ value: String) {
+        values.append(value)
+    }
+}
+
+private final class FakeHotkeyManager: HotkeyManaging {
+    var onPress: (() -> Void)?
+    var onRelease: (() -> Void)?
+    var onCancel: (() -> Void)?
+    private(set) var restartCallCount = 0
+    private(set) var markSessionInactiveCallCount = 0
+
+    func restart() -> Bool {
+        restartCallCount += 1
+        return true
+    }
+
+    func markSessionInactive() {
+        markSessionInactiveCallCount += 1
+    }
+
+    func press() {
+        onPress?()
+    }
+}
+
+@MainActor
+private final class FakeDictationOverlayPresenter: DictationOverlayPresenting {
+    var isVisibleOnScreen = true
+    var showRecordingResult = true
+    var showRecordingError: Error?
+    private(set) var showRecordingCallCount = 0
+    private(set) var showLoaderCallCount = 0
+    private(set) var showErrorCallCount = 0
+    private(set) var hideCallCount = 0
+    private let events: TestEventLog
+
+    init(events: TestEventLog) {
+        self.events = events
+    }
+
+    func showRecording(
+        message: String,
+        level: Double,
+        onStop: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) throws -> Bool {
+        showRecordingCallCount += 1
+        events.append("overlay.showRecording")
+
+        if let showRecordingError {
+            throw showRecordingError
+        }
+
+        return showRecordingResult
+    }
+
+    func showLoader() {
+        showLoaderCallCount += 1
+    }
+
+    func showError(message: String) {
+        showErrorCallCount += 1
+    }
+
+    func hide() {
+        hideCallCount += 1
+        isVisibleOnScreen = false
+    }
+}
+
+private final class FakeAudioRecordingService: AudioRecordingServicing {
+    var recordingsDirectory: URL?
+    var startRecordingError: Error?
+    var stopRecordingURL = URL(fileURLWithPath: "/tmp/ruflow-test.wav")
+    private(set) var startRecordingCallCount = 0
+    private(set) var stopRecordingCallCount = 0
+    private(set) var cancelRecordingCallCount = 0
+    private(set) var removeRecordingCallCount = 0
+    private(set) var isRecording = false
+    private let events: TestEventLog
+
+    init(events: TestEventLog) {
+        self.events = events
+    }
+
+    func startRecording() throws {
+        startRecordingCallCount += 1
+        events.append("recorder.startRecording")
+
+        if let startRecordingError {
+            throw startRecordingError
+        }
+
+        isRecording = true
+    }
+
+    func normalizedMeterLevel() -> Double {
+        0
+    }
+
+    func stopRecording() throws -> URL {
+        stopRecordingCallCount += 1
+        isRecording = false
+        return stopRecordingURL
+    }
+
+    func cancelRecording() {
+        cancelRecordingCallCount += 1
+        isRecording = false
+    }
+
+    func removeRecording(at outputURL: URL) {
+        removeRecordingCallCount += 1
+    }
+}
+
+private struct FakeMicrophonePermissionProvider: MicrophonePermissionProviding {
+    let authorizationStatus: AVAuthorizationStatus
+    let hasAvailableInput: Bool
+
+    func requestIfNeeded() async -> Bool {
+        authorizationStatus == .authorized
+    }
 }
 
 private final class TestTimeoutState<T: Sendable>: @unchecked Sendable {

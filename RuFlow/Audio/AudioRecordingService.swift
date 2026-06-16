@@ -33,7 +33,17 @@ enum AudioRecordingError: LocalizedError {
     }
 }
 
-final class AudioRecordingService: NSObject {
+protocol AudioRecordingServicing: AnyObject {
+    var recordingsDirectory: URL? { get }
+
+    func startRecording() throws
+    func normalizedMeterLevel() -> Double
+    func stopRecording() throws -> URL
+    func cancelRecording()
+    func removeRecording(at outputURL: URL)
+}
+
+final class AudioRecordingService: NSObject, AudioRecordingServicing {
     private var recorder: AVAudioRecorder?
     private var currentFileURL: URL?
     private let fileManager: FileManager

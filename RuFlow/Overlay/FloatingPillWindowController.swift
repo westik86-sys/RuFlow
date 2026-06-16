@@ -2,8 +2,56 @@ import AppKit
 import QuartzCore
 import SwiftUI
 
+enum FloatingPillPresentationError: LocalizedError {
+    case contentViewMissing
+    case notVisible
+    case offScreen
+
+    var errorDescription: String? {
+        switch self {
+        case .contentViewMissing:
+            return "Не удалось показать индикатор диктовки"
+        case .notVisible:
+            return "Индикатор диктовки не появился"
+        case .offScreen:
+            return "Индикатор диктовки оказался за пределами экрана"
+        }
+    }
+}
+
 @MainActor
-final class FloatingPillWindowController {
+protocol DictationOverlayPresenting: AnyObject {
+    var isVisibleOnScreen: Bool { get }
+
+    @discardableResult
+    func showRecording(
+        message: String,
+        level: Double,
+        onStop: @escaping () -> Void,
+        onCancel: @escaping () -> Void
+    ) throws -> Bool
+
+    func showLoader()
+    func showError(message: String)
+    func hide()
+}
+
+private final class NonActivatingFloatingPanel: NSPanel {
+    override var canBecomeKey: Bool {
+        false
+    }
+
+    override var canBecomeMain: Bool {
+        false
+    }
+
+    override var acceptsFirstResponder: Bool {
+        false
+    }
+}
+
+@MainActor
+final class FloatingPillWindowController: DictationOverlayPresenting {
     private let window: NSPanel
     private let state = FloatingPillState()
     private let recordingWidth: CGFloat = 223
@@ -15,7 +63,7 @@ final class FloatingPillWindowController {
     private var currentHeight: CGFloat?
 
     init() {
-        window = NSPanel(
+        window = NonActivatingFloatingPanel(
             contentRect: NSRect(x: 0, y: 0, width: recordingWidth, height: standardHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -26,9 +74,18 @@ final class FloatingPillWindowController {
         window.backgroundColor = .clear
         window.hasShadow = false
         window.level = .statusBar
-        window.ignoresMouseEvents = false
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        window.ignoresMouseEvents = true
+        window.hidesOnDeactivate = false
+        window.isReleasedWhenClosed = false
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary, .ignoresCycle]
         window.contentView = NSHostingView(rootView: FloatingPillView(state: state))
+    }
+
+    var isVisibleOnScreen: Bool {
+        window.contentView != nil
+            && window.isVisible
+            && !window.frame.isEmpty
+            && Self.screenIntersectsWindowFrame(window.frame)
     }
 
     func showError(message: String) {
@@ -50,7 +107,7 @@ final class FloatingPillWindowController {
         level: Double,
         onStop: @escaping () -> Void,
         onCancel: @escaping () -> Void
-    ) {
+    ) throws -> Bool {
         state.showRecording(
             message: message,
             level: level,
@@ -58,11 +115,14 @@ final class FloatingPillWindowController {
             onCancel: onCancel
         )
         positionWindowIfNeeded(width: recordingWidth, height: standardHeight, animated: false)
+        window.ignoresMouseEvents = true
 
-        if !window.isVisible {
-            window.ignoresMouseEvents = true
+        if !window.isVisible || !isVisibleOnScreen {
             window.orderFrontRegardless()
         }
+
+        try verifyVisibleOnScreen()
+        return true
     }
 
     func hide() {
@@ -81,7 +141,7 @@ final class FloatingPillWindowController {
     }
 
     private func positionWindow(width: CGFloat, height: CGFloat, animated: Bool) {
-        let visibleFrame = NSScreen.main?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? .zero
+        let visibleFrame = Self.currentVisibleFrame()
         let x = visibleFrame.midX - width / 2
         let y = visibleFrame.minY + 84
         let frame = NSRect(x: x, y: y, width: width, height: height)
@@ -98,5 +158,34 @@ final class FloatingPillWindowController {
 
         currentWidth = width
         currentHeight = height
+    }
+
+    private func verifyVisibleOnScreen() throws {
+        guard window.contentView != nil else {
+            throw FloatingPillPresentationError.contentViewMissing
+        }
+
+        guard window.isVisible else {
+            throw FloatingPillPresentationError.notVisible
+        }
+
+        guard Self.screenIntersectsWindowFrame(window.frame) else {
+            throw FloatingPillPresentationError.offScreen
+        }
+    }
+
+    private static func currentVisibleFrame() -> NSRect {
+        let mouseLocation = NSEvent.mouseLocation
+        if let screen = NSScreen.screens.first(where: { $0.frame.contains(mouseLocation) }) {
+            return screen.visibleFrame
+        }
+
+        return NSScreen.main?.visibleFrame ?? NSScreen.screens.first?.visibleFrame ?? .zero
+    }
+
+    private static func screenIntersectsWindowFrame(_ frame: NSRect) -> Bool {
+        NSScreen.screens.contains { screen in
+            screen.frame.intersects(frame)
+        }
     }
 }

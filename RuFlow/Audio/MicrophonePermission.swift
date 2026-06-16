@@ -1,5 +1,27 @@
 import AVFoundation
 
+@MainActor
+protocol MicrophonePermissionProviding {
+    var authorizationStatus: AVAuthorizationStatus { get }
+    var hasAvailableInput: Bool { get }
+
+    func requestIfNeeded() async -> Bool
+}
+
+struct SystemMicrophonePermissionProvider: MicrophonePermissionProviding {
+    var authorizationStatus: AVAuthorizationStatus {
+        MicrophonePermission.authorizationStatus
+    }
+
+    var hasAvailableInput: Bool {
+        MicrophonePermission.hasAvailableInput
+    }
+
+    func requestIfNeeded() async -> Bool {
+        await MicrophonePermission.requestIfNeeded()
+    }
+}
+
 enum MicrophonePermission {
     static var authorizationStatus: AVAuthorizationStatus {
         AVCaptureDevice.authorizationStatus(for: .audio)

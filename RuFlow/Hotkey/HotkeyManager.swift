@@ -2,7 +2,16 @@ import AppKit
 import ApplicationServices
 import Foundation
 
-final class HotkeyManager {
+protocol HotkeyManaging: AnyObject {
+    var onPress: (() -> Void)? { get set }
+    var onRelease: (() -> Void)? { get set }
+    var onCancel: (() -> Void)? { get set }
+
+    func restart() -> Bool
+    func markSessionInactive()
+}
+
+final class HotkeyManager: HotkeyManaging {
     var onPress: (() -> Void)?
     var onRelease: (() -> Void)?
     var onCancel: (() -> Void)?
