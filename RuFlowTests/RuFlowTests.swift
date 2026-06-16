@@ -101,6 +101,31 @@ final class ASRSidecarResponseParserTests: XCTestCase {
     }
 }
 
+final class DictationTextFormatterTests: XCTestCase {
+    func testRemovesFinalPeriodFromSingleSentence() {
+        XCTAssertEqual(
+            DictationTextFormatter.formatForInsertion("  Привет это тест.  "),
+            "Привет это тест"
+        )
+    }
+
+    func testKeepsFinalPeriodForMultipleSentences() {
+        XCTAssertEqual(
+            DictationTextFormatter.formatForInsertion("Привет. Это тест."),
+            "Привет. Это тест."
+        )
+    }
+
+    func testKeepsQuestionAndExclamationMarksForSingleSentence() {
+        XCTAssertEqual(DictationTextFormatter.formatForInsertion("Как дела?"), "Как дела?")
+        XCTAssertEqual(DictationTextFormatter.formatForInsertion("Отлично!"), "Отлично!")
+    }
+
+    func testKeepsEllipsisForSingleSentence() {
+        XCTAssertEqual(DictationTextFormatter.formatForInsertion("Ну вот..."), "Ну вот...")
+    }
+}
+
 final class ASRSidecarServiceTests: XCTestCase {
     func testTranscribeUsesProcessRunnerAndParsesOutput() async throws {
         let audioURL = try makeTemporaryFile(extension: "wav")

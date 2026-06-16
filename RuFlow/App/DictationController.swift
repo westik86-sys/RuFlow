@@ -1,5 +1,39 @@
 import AVFoundation
 import Foundation
+import NaturalLanguage
+
+enum DictationTextFormatter {
+    static func formatForInsertion(_ rawText: String) -> String {
+        let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard shouldRemoveFinalPeriod(from: text) else {
+            return text
+        }
+
+        return String(text.dropLast()).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private static func shouldRemoveFinalPeriod(from text: String) -> Bool {
+        guard text.hasSuffix("."), !text.hasSuffix("...") else {
+            return false
+        }
+
+        return sentenceCount(in: text) == 1
+    }
+
+    private static func sentenceCount(in text: String) -> Int {
+        let tokenizer = NLTokenizer(unit: .sentence)
+        tokenizer.string = text
+
+        var count = 0
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { _, _ in
+            count += 1
+            return count < 2
+        }
+
+        return count
+    }
+}
 
 @MainActor
 final class DictationController: ObservableObject {
@@ -295,7 +329,7 @@ final class DictationController: ObservableObject {
                 return
             }
 
-            let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            let text = DictationTextFormatter.formatForInsertion(result.text)
             guard !text.isEmpty else {
                 throw ASRSidecarError.emptyText
             }
