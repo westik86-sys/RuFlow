@@ -160,6 +160,36 @@ final class LoginLaunchAgentServiceTests: XCTestCase {
     }
 }
 
+final class RuFlowChangelogTests: XCTestCase {
+    func testLatestEntryUsesCurrentReleaseVersion() throws {
+        let latestEntry = try XCTUnwrap(RuFlowChangelog.entries.first)
+
+        XCTAssertEqual(RuFlowChangelog.latestVersion, "1.0")
+        XCTAssertEqual(latestEntry.version, "1.0")
+        XCTAssertEqual(latestEntry.dateText, "16 июня 2026")
+    }
+
+    func testLatestEntryUsesUserFacingSections() throws {
+        let latestEntry = try XCTUnwrap(RuFlowChangelog.entries.first)
+
+        XCTAssertEqual(
+            latestEntry.sections.map(\.title),
+            ["Добавлено", "Улучшено", "Исправлено"]
+        )
+        XCTAssertTrue(latestEntry.sections.allSatisfy { !$0.items.isEmpty })
+    }
+
+    func testChangelogItemsAreUserFacingAndNonEmpty() {
+        let items = RuFlowChangelog.entries
+            .flatMap(\.sections)
+            .flatMap(\.items)
+            .map(\.text)
+
+        XCTAssertEqual(items.count, 5)
+        XCTAssertTrue(items.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+    }
+}
+
 final class ASRSidecarServiceTests: XCTestCase {
     func testTranscribeUsesProcessRunnerAndParsesOutput() async throws {
         let audioURL = try makeTemporaryFile(extension: "wav")

@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject private var dictationController: DictationController
     @State private var permissionPollingTask: Task<Void, Never>?
     @State private var showsAdvancedSettings = false
+    @State private var showsChangelog = false
     @State private var startsAtLogin = LoginLaunchAgentService.isEnabled
     @State private var startAtLoginErrorMessage: String?
 
@@ -102,6 +103,9 @@ struct SettingsView: View {
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             refreshPermissionsAndUpdatePolling()
         }
+        .sheet(isPresented: $showsChangelog) {
+            ChangelogSheetView(entries: RuFlowChangelog.entries)
+        }
     }
 
     private var settingsFooter: some View {
@@ -116,8 +120,25 @@ struct SettingsView: View {
             Text("Если нашли баг или хотите предложить улучшение — напишите мне 🤙🏻")
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            HStack(spacing: 4) {
+                Text("Версия \(appVersionText)")
+                    .foregroundStyle(.secondary)
+                Text("·")
+                    .foregroundStyle(.secondary)
+                Button("Что нового") {
+                    showsChangelog = true
+                }
+                .buttonStyle(.link)
+                .pointingHandCursor()
+            }
         }
         .font(.body)
+    }
+
+    private var appVersionText: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+            ?? RuFlowChangelog.latestVersion
     }
 
     private var accessibilityPermissionButton: some View {
@@ -290,6 +311,148 @@ struct SettingsView: View {
         }
 
         NSWorkspace.shared.open(directoryURL)
+    }
+}
+
+struct ChangelogEntry: Identifiable, Equatable {
+    let version: String
+    let dateText: String
+    let sections: [ChangelogSection]
+
+    var id: String {
+        version
+    }
+}
+
+struct ChangelogSection: Identifiable, Equatable {
+    let title: String
+    let items: [ChangelogItem]
+
+    var id: String {
+        title
+    }
+}
+
+struct ChangelogItem: Identifiable, Equatable {
+    let text: String
+
+    var id: String {
+        text
+    }
+}
+
+enum RuFlowChangelog {
+    static let entries = [
+        ChangelogEntry(
+            version: "1.0",
+            dateText: "16 июня 2026",
+            sections: [
+                ChangelogSection(
+                    title: "Добавлено",
+                    items: [
+                        ChangelogItem(text: "Настройка автозапуска RuFlow при входе в систему.")
+                    ]
+                ),
+                ChangelogSection(
+                    title: "Улучшено",
+                    items: [
+                        ChangelogItem(text: "Диктовка начинается только после появления индикатора на экране."),
+                        ChangelogItem(text: "У одиночных распознанных фраз убирается лишняя точка в конце.")
+                    ]
+                ),
+                ChangelogSection(
+                    title: "Исправлено",
+                    items: [
+                        ChangelogItem(text: "Индикатор диктовки больше не должен пропадать за пределы экрана."),
+                        ChangelogItem(text: "Запись корректно отменяется, если индикатор не появился или пропал во время диктовки.")
+                    ]
+                )
+            ]
+        )
+    ]
+
+    static var latestVersion: String {
+        entries.first?.version ?? "1.0"
+    }
+}
+
+private struct ChangelogSheetView: View {
+    let entries: [ChangelogEntry]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("История изменений")
+                    .font(.title3.weight(.semibold))
+                Spacer()
+                Button("Закрыть") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+            }
+            .padding(.top, 20)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 12)
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    ForEach(entries) { entry in
+                        ChangelogEntryView(entry: entry)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(24)
+            }
+        }
+        .frame(width: 560)
+        .frame(minHeight: 440)
+    }
+}
+
+private struct ChangelogEntryView: View {
+    let entry: ChangelogEntry
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("RuFlow \(entry.version)")
+                    .font(.headline)
+                Text(entry.dateText)
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(entry.sections) { section in
+                    ChangelogSectionView(section: section)
+                }
+            }
+        }
+    }
+}
+
+private struct ChangelogSectionView: View {
+    let section: ChangelogSection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(section.title)
+                .font(.subheadline.weight(.semibold))
+
+            VStack(alignment: .leading, spacing: 5) {
+                ForEach(section.items) { item in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("•")
+                            .foregroundStyle(.secondary)
+                        Text(item.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
     }
 }
 
