@@ -126,6 +126,103 @@ final class DictationTextFormatterTests: XCTestCase {
     }
 }
 
+final class HotkeyShortcutTests: XCTestCase {
+    func testDefaultShortcutUsesOptionSpace() {
+        XCTAssertEqual(HotkeyShortcut.defaultShortcut.keyCode, 49)
+        XCTAssertEqual(HotkeyShortcut.defaultShortcut.modifiers, .option)
+        XCTAssertEqual(HotkeyShortcut.defaultShortcut.displayName, "Option + Space")
+    }
+
+    func testRejectsShortcutWithoutModifiers() {
+        XCTAssertNil(HotkeyShortcut(keyCode: 49, modifiers: [], keyDisplayName: "Space"))
+    }
+
+    func testRejectsEscapeShortcutBecauseItCancelsRecording() {
+        XCTAssertNil(
+            HotkeyShortcut(
+                keyCode: HotkeyShortcut.escapeKeyCode,
+                modifiers: .option,
+                keyDisplayName: "Escape"
+            )
+        )
+    }
+
+    func testUsesLatinPhysicalKeyNameForCyrillicInputLayout() throws {
+        let shortcut = try XCTUnwrap(
+            HotkeyShortcut(keyCode: 40, modifiers: .shift, keyDisplayName: "л")
+        )
+
+        XCTAssertEqual(shortcut.displayName, "Shift + K")
+    }
+
+    func testUsesPhysicalNumberKeyNameForShiftSymbol() throws {
+        let shortcut = try XCTUnwrap(
+            HotkeyShortcut(keyCode: 21, modifiers: .shift, keyDisplayName: "$")
+        )
+
+        XCTAssertEqual(shortcut.displayName, "Shift + 4")
+    }
+
+    func testMatchesPrimaryKeyWithRequiredModifiers() throws {
+        let shortcut = try XCTUnwrap(
+            HotkeyShortcut(keyCode: 40, modifiers: [.control, .option], keyDisplayName: "K")
+        )
+
+        XCTAssertTrue(shortcut.matches(keyCode: 40, flags: [.maskControl, .maskAlternate]))
+        XCTAssertFalse(shortcut.matches(keyCode: 40, flags: .maskControl))
+        XCTAssertFalse(shortcut.matches(keyCode: 41, flags: [.maskControl, .maskAlternate]))
+    }
+
+    func testUserDefaultsStoreRoundTripsShortcut() throws {
+        let suiteName = "RuFlowHotkeyShortcutTests-\(UUID().uuidString)"
+        let userDefaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer {
+            userDefaults.removePersistentDomain(forName: suiteName)
+        }
+
+        let store = UserDefaultsHotkeySettingsStore(userDefaults: userDefaults)
+        let shortcut = try XCTUnwrap(
+            HotkeyShortcut(keyCode: 40, modifiers: [.control, .option], keyDisplayName: "K")
+        )
+
+        store.save(shortcut)
+
+        XCTAssertEqual(store.load(), shortcut)
+    }
+}
+
+@MainActor
+final class DictationControllerHotkeyTests: XCTestCase {
+    func testUpdatesHotkeyShortcutAndRestartsHotkeyManager() throws {
+        let events = TestEventLog()
+        let hotkey = FakeHotkeyManager()
+        let store = FakeHotkeySettingsStore(shortcut: .defaultShortcut)
+        let controller = DictationController(
+            hotkeyManager: hotkey,
+            overlayController: FakeDictationOverlayPresenter(events: events),
+            recordingService: FakeAudioRecordingService(events: events),
+            microphonePermission: FakeMicrophonePermissionProvider(
+                authorizationStatus: .authorized,
+                hasAvailableInput: true
+            ),
+            hotkeySettingsStore: store,
+            requestMicrophoneAccessOnInit: false
+        )
+        let restartCallCount = hotkey.restartCallCount
+        let shortcut = try XCTUnwrap(
+            HotkeyShortcut(keyCode: 40, modifiers: [.control, .option], keyDisplayName: "K")
+        )
+
+        controller.updateHotkeyShortcut(shortcut)
+
+        XCTAssertEqual(controller.hotkeyShortcut, shortcut)
+        XCTAssertEqual(controller.hotkeyShortcutText, "Control + Option + K")
+        XCTAssertEqual(hotkey.shortcut, shortcut)
+        XCTAssertEqual(store.savedShortcut, shortcut)
+        XCTAssertEqual(hotkey.restartCallCount, restartCallCount + 1)
+    }
+}
+
 final class LoginLaunchAgentServiceTests: XCTestCase {
     func testLaunchAgentOpensRuFlowByBundleIdentifier() {
         let plist = LoginLaunchAgentService.propertyList()
@@ -185,7 +282,7 @@ final class RuFlowChangelogTests: XCTestCase {
             .flatMap(\.items)
             .map(\.text)
 
-        XCTAssertEqual(items.count, 5)
+        XCTAssertEqual(items.count, 6)
         XCTAssertTrue(items.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
     }
 }
@@ -520,6 +617,7 @@ final class DictationControllerOverlayFailSafeTests: XCTestCase {
             overlayController: overlay,
             recordingService: recorder,
             microphonePermission: microphonePermission,
+            hotkeySettingsStore: FakeHotkeySettingsStore(shortcut: .defaultShortcut),
             requestMicrophoneAccessOnInit: false
         )
 
@@ -554,6 +652,7 @@ private final class FakeHotkeyManager: HotkeyManaging {
     var onPress: (() -> Void)?
     var onRelease: (() -> Void)?
     var onCancel: (() -> Void)?
+    var shortcut: HotkeyShortcut = .defaultShortcut
     private(set) var restartCallCount = 0
     private(set) var markSessionInactiveCallCount = 0
 
@@ -568,6 +667,23 @@ private final class FakeHotkeyManager: HotkeyManaging {
 
     func press() {
         onPress?()
+    }
+}
+
+private final class FakeHotkeySettingsStore: HotkeySettingsStoring {
+    private let shortcut: HotkeyShortcut
+    private(set) var savedShortcut: HotkeyShortcut?
+
+    init(shortcut: HotkeyShortcut) {
+        self.shortcut = shortcut
+    }
+
+    func load() -> HotkeyShortcut {
+        shortcut
+    }
+
+    func save(_ shortcut: HotkeyShortcut) {
+        savedShortcut = shortcut
     }
 }
 

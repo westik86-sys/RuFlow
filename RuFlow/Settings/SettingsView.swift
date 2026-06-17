@@ -6,6 +6,7 @@ struct SettingsView: View {
     @State private var permissionPollingTask: Task<Void, Never>?
     @State private var showsAdvancedSettings = false
     @State private var showsChangelog = false
+    @State private var showsHotkeyRecorder = false
     @State private var startsAtLogin = LoginLaunchAgentService.isEnabled
     @State private var startAtLoginErrorMessage: String?
 
@@ -31,7 +32,15 @@ struct SettingsView: View {
                     GridRow {
                         Text("Горячая клавиша")
                             .foregroundStyle(.secondary)
-                        Text("Option + Space, удерживать")
+                        HStack(spacing: 8) {
+                            Text("\(dictationController.hotkeyShortcutText), удерживать")
+
+                            Button("Изменить") {
+                                showsHotkeyRecorder = true
+                            }
+                            .controlSize(.small)
+                            .disabled(dictationController.isRecordingOrSaving)
+                        }
                     }
 
                     GridRow {
@@ -105,6 +114,12 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showsChangelog) {
             ChangelogSheetView(entries: RuFlowChangelog.entries)
+        }
+        .sheet(isPresented: $showsHotkeyRecorder) {
+            HotkeyRecorderSheetView(
+                currentShortcut: dictationController.hotkeyShortcut,
+                onSave: dictationController.updateHotkeyShortcut
+            )
         }
     }
 
@@ -317,6 +332,135 @@ struct SettingsView: View {
     }
 }
 
+private struct HotkeyRecorderSheetView: View {
+    private let onSave: (HotkeyShortcut) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var capturedShortcut: HotkeyShortcut
+    @State private var validationMessage: String?
+
+    init(
+        currentShortcut: HotkeyShortcut,
+        onSave: @escaping (HotkeyShortcut) -> Void
+    ) {
+        self.onSave = onSave
+        _capturedShortcut = State(initialValue: currentShortcut)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Горячая клавиша")
+                .font(.title3.weight(.semibold))
+
+            Text("Нажмите новое сочетание клавиш")
+                .foregroundStyle(.secondary)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(.secondary.opacity(0.35), lineWidth: 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(.quaternary.opacity(0.4))
+                    )
+
+                Text(capturedShortcut.displayName)
+                    .font(.title3.weight(.medium))
+            }
+            .frame(height: 72)
+            .background(
+                HotkeyCaptureView { event in
+                    capture(event)
+                }
+            )
+
+            if let validationMessage {
+                Text(validationMessage)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack {
+                Button("Сбросить") {
+                    capturedShortcut = .defaultShortcut
+                    validationMessage = nil
+                }
+
+                Spacer()
+
+                Button("Отмена") {
+                    dismiss()
+                }
+                .keyboardShortcut(.cancelAction)
+
+                Button("Готово") {
+                    onSave(capturedShortcut)
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(24)
+        .frame(width: 420)
+    }
+
+    private func capture(_ event: NSEvent) {
+        if Int64(event.keyCode) == HotkeyShortcut.escapeKeyCode {
+            dismiss()
+            return
+        }
+
+        guard let shortcut = HotkeyShortcut(event: event) else {
+            validationMessage = "Добавьте Command, Option, Control или Shift"
+            return
+        }
+
+        capturedShortcut = shortcut
+        validationMessage = nil
+    }
+}
+
+private struct HotkeyCaptureView: NSViewRepresentable {
+    let onKeyDown: (NSEvent) -> Void
+
+    func makeNSView(context: Context) -> HotkeyCaptureNSView {
+        let view = HotkeyCaptureNSView()
+        view.onKeyDown = onKeyDown
+        view.focus()
+        return view
+    }
+
+    func updateNSView(_ nsView: HotkeyCaptureNSView, context: Context) {
+        nsView.onKeyDown = onKeyDown
+        nsView.focus()
+    }
+}
+
+private final class HotkeyCaptureNSView: NSView {
+    var onKeyDown: ((NSEvent) -> Void)?
+
+    override var acceptsFirstResponder: Bool {
+        true
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        focus()
+    }
+
+    override func keyDown(with event: NSEvent) {
+        onKeyDown?(event)
+    }
+
+    func focus() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else {
+                return
+            }
+
+            window?.makeFirstResponder(self)
+        }
+    }
+}
+
 struct ChangelogEntry: Identifiable, Equatable {
     let version: String
     let dateText: String
@@ -359,6 +503,7 @@ enum RuFlowChangelog {
                 ChangelogSection(
                     title: "Улучшено",
                     items: [
+                        ChangelogItem(text: "Горячие клавиши отображаются латиницей независимо от выбранной раскладки."),
                         ChangelogItem(text: "Диктовка начинается только после появления индикатора на экране."),
                         ChangelogItem(text: "У одиночных распознанных фраз убирается лишняя точка в конце.")
                     ]

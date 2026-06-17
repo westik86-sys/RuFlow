@@ -48,6 +48,7 @@ final class DictationController: ObservableObject {
     @Published private(set) var microphoneAuthorizationStatus: AVAuthorizationStatus
     @Published private(set) var hasAvailableMicrophone: Bool
     @Published private(set) var isHotkeyReady = false
+    @Published private(set) var hotkeyShortcut: HotkeyShortcut = .defaultShortcut
     @Published private(set) var recordingDurationText = "00:00"
     @Published private(set) var lastErrorMessage: String?
 
@@ -59,6 +60,7 @@ final class DictationController: ObservableObject {
     private let asrService: ASRSidecarService
     private let asrConfiguration: ASRDebugConfiguration
     private let microphonePermission: MicrophonePermissionProviding
+    private let hotkeySettingsStore: HotkeySettingsStoring
     private var recordingTimerTask: Task<Void, Never>?
     private var errorPresentationTask: Task<Void, Never>?
     private var asrTask: Task<Void, Never>?
@@ -74,6 +76,7 @@ final class DictationController: ObservableObject {
         asrService: ASRSidecarService = ASRSidecarService(),
         asrConfiguration: ASRDebugConfiguration = .current,
         microphonePermission: MicrophonePermissionProviding = SystemMicrophonePermissionProvider(),
+        hotkeySettingsStore: HotkeySettingsStoring = UserDefaultsHotkeySettingsStore(),
         requestMicrophoneAccessOnInit: Bool = true
     ) {
         self.hotkeyManager = hotkeyManager
@@ -83,9 +86,13 @@ final class DictationController: ObservableObject {
         self.asrService = asrService
         self.asrConfiguration = asrConfiguration
         self.microphonePermission = microphonePermission
+        self.hotkeySettingsStore = hotkeySettingsStore
+        let loadedHotkeyShortcut = hotkeySettingsStore.load()
+        hotkeyShortcut = loadedHotkeyShortcut
         isAccessibilityTrusted = AccessibilityPermission.isTrusted
         microphoneAuthorizationStatus = microphonePermission.authorizationStatus
         hasAvailableMicrophone = microphonePermission.hasAvailableInput
+        self.hotkeyManager.shortcut = loadedHotkeyShortcut
 
         hotkeyManager.onPress = { [weak self] in
             Task { @MainActor in
@@ -143,7 +150,7 @@ final class DictationController: ObservableObject {
 
         switch state {
         case .idle:
-            return "Готово: Option + Space"
+            return "Удерживайте \(hotkeyShortcut.displayName) для диктовки"
         case .recording:
             return "Слушаю... осталось \(recordingDurationText)"
         case .saving:
@@ -203,8 +210,23 @@ final class DictationController: ObservableObject {
         state == .recording || state == .saving
     }
 
+    var hotkeyShortcutText: String {
+        hotkeyShortcut.displayName
+    }
+
     func refreshPermissionsAndHotkey() {
         refreshPermissionState()
+        isHotkeyReady = hotkeyManager.restart()
+    }
+
+    func updateHotkeyShortcut(_ shortcut: HotkeyShortcut) {
+        guard state == .idle, hotkeyShortcut != shortcut else {
+            return
+        }
+
+        hotkeySettingsStore.save(shortcut)
+        hotkeyShortcut = shortcut
+        hotkeyManager.shortcut = shortcut
         isHotkeyReady = hotkeyManager.restart()
     }
 
