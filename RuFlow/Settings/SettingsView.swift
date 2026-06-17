@@ -497,7 +497,8 @@ enum RuFlowChangelog {
                 ChangelogSection(
                     title: "Добавлено",
                     items: [
-                        ChangelogItem(text: "Настройка автозапуска RuFlow при входе в систему.")
+                        ChangelogItem(text: "Настройка автозапуска RuFlow при входе в систему."),
+                        ChangelogItem(text: "Возможность переназначить горячую клавишу для диктовки.")
                     ]
                 ),
                 ChangelogSection(

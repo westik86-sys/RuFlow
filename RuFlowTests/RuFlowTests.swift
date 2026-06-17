@@ -282,7 +282,7 @@ final class RuFlowChangelogTests: XCTestCase {
             .flatMap(\.items)
             .map(\.text)
 
-        XCTAssertEqual(items.count, 6)
+        XCTAssertEqual(items.count, 7)
         XCTAssertTrue(items.allSatisfy { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
     }
 }
