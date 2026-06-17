@@ -121,6 +121,9 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
+            Divider()
+                .padding(.vertical, 6)
+
             HStack(spacing: 4) {
                 Text("Версия \(appVersionText)")
                     .foregroundStyle(.secondary)
