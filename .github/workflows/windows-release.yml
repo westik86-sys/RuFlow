@@ -1,0 +1,68 @@
+name: Windows Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    env:
+      WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+      WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --no-progress -y
+
+      - name: Prepare signing certificate
+        if: ${{ env.WINDOWS_SIGNING_CERT_BASE64 != '' }}
+        shell: pwsh
+        run: |
+          $certPath = Join-Path $env:RUNNER_TEMP "ruflow-signing.pfx"
+          [IO.File]::WriteAllBytes($certPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
+          "RUFLOW_SIGN_CERT_PATH=$certPath" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "RUFLOW_SIGN_CERT_PASSWORD=$env:WINDOWS_SIGNING_CERT_PASSWORD" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Install dependencies
+        shell: cmd
+        run: scripts\setup_windows.bat
+
+      - name: Run tests
+        shell: cmd
+        run: |
+          call .venv-win\Scripts\activate.bat
+          python -m unittest discover -s windows -p "test_*.py"
+          python -m unittest asr/test_runner.py
+
+      - name: Build Windows release
+        shell: cmd
+        run: scripts\build_windows_release.bat
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ruflow-windows
+          path: |
+            dist/windows/RuFlowSetup-x64.exe
+            dist/windows/RuFlow-portable-x64.zip
+            dist/windows/RuFlow/**
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/windows/RuFlowSetup-x64.exe
+            dist/windows/RuFlow-portable-x64.zip
