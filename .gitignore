@@ -2,6 +2,8 @@
 build/
 dist/
 asr/.venv/
+.venv-win/
+*.spec
 
 # Xcode user state
 *.xcuserstate

@@ -1,6 +1,8 @@
 # RuFlow ASR Sidecar
 
 Local ASR runner for RuFlow. It loads `gigaam-v3-e2e-rnnt` through `onnx-asr` and prints exactly one JSON object to stdout.
+Long WAV files are split into 25-second chunks before recognition, then all
+recognized segments are joined into one transcript.
 
 ```sh
 cd asr
@@ -29,4 +31,14 @@ Smoke test:
 python smoke_test.py ../samples/test.wav
 ```
 
-The first run may download model files from Hugging Face into the local Hugging Face cache.
+The Windows app downloads the default model into
+`%LOCALAPPDATA%\RuFlow\Models\gigaam-v3-e2e-rnnt` on first launch. Direct
+`asr/runner.py` usage without `RUFLOW_GIGAAM_MODEL_DIR` uses the standard
+Hugging Face cache.
+
+Optional environment variables:
+
+- `RUFLOW_ASR_MODEL` - `onnx-asr` model name;
+- `RUFLOW_GIGAAM_MODEL_DIR` - local model directory;
+- `RUFLOW_ASR_CHUNK_SECONDS` - ASR chunk size in seconds; default is `25`, set
+  to `0` to disable chunking.
